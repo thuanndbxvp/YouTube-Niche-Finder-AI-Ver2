@@ -14,6 +14,7 @@ import PasswordModal from './components/PasswordModal';
 import ContentPlanModal from './components/ContentPlanModal';
 import ErrorModal from './components/ErrorModal';
 import NotificationCenter from './components/NotificationCenter';
+import { keyFindingTranscript, nicheKnowledgeBase } from './data/knowledgeBase';
 
 export type ApiKeyStatus = 'idle' | 'checking' | 'valid' | 'invalid';
 
@@ -135,6 +136,17 @@ const App: React.FC = () => {
     };
     
     autoValidateApiKeys();
+
+    // Load saved niches
+    try {
+        const storedNiches = localStorage.getItem('savedNiches');
+        if (storedNiches) {
+            setSavedNiches(JSON.parse(storedNiches));
+        }
+    } catch (e) {
+        console.error("Could not parse saved niches from localStorage", e);
+        localStorage.removeItem('savedNiches');
+    }
     
     // Training Password
     const storedPassword = localStorage.getItem('trainingPassword');
@@ -151,32 +163,6 @@ const App: React.FC = () => {
     if (storedTrainingHistory) {
       setTrainingChatHistory(JSON.parse(storedTrainingHistory));
     } else {
-        const keyFindingTranscript = `Ok xin chào tất cả các bạn nha hôm nay ND group sẽ hướng dẫn các bạn cách để tìm kiếm một ky ngon một cách đơn giản nhất và mình sẽ hướng dẫn bạn chi tiết từ A đến Z tại sao phải là ki ngon Bởi vì tất cả những ai làm YouTube thì đều biết rằng là việc tìm kiếm ra một cái ky ngon đã quyết định đến 60 đến 70 ph thành công của kênh của bạn và hôm nay thì mình sẽ chia sẻ cho bạn năm cái cách để có thể tìm kiếm ki ngon một cách đơn giản nhất chưa ạ cách đầu tiên thì chúng ta dùng bằng thanh công cụ của Tìm kiếm của YouTube thứ hai là chúng ta sẽ dùng
-thanh công cụ tìm kiếm của Google thứ ba là chúng ta sẽ dùng Google chen và thứ tư là chúng ta sẽ dùng công cụ viq và thứ năm thì có lẽ là một công cụ mà cá nhân mình đánh giá là mạnh nhất tối ưu thời gian nhất tiết kiệm được cái công sức của các bạn nhiều nhất và nó cũng là đơn giản nhất thì muốn biết cá công cụ thứ năm nào thì bạn có thể là xem hết video nhá mình sẽ tiết lộ ở cuối video đúng không ạ Bây giờ mình sẽ vào việc luôn này cách đầu tiên thì chúng ta sử dụng thanh gợi ý của YouTube tìm kiếm thì mình sẽ chọn một cái chủ đề nhá Ví
-dụ mình chọn luôn cái chủ đề là funny đi thì bạn ấy gõ cái từ khóa ví dụ là funny sau đó ấn dấu cách thì sẽ nó sẽ gợi ý ra các gợi ý mà người dùng hay tìm kiếm sau đó thì bạn hãy lần lượt thay thế bằng các ký tự như là a b c d thì tiếp tục cho ra rất nhiều những cái gợi ý khác nhau nữa mình sẽ để demo luôn cho bạn nhá ví dụ này mình gõ cụm từ khóa à funny Sau đó mình ấn dấu cách ra thì chúng ta có thể ở đây sẽ gợi ý cho chúng ta rất nhiều những cụm từ khóa tìm kiếm mà người dùng Họ đang tìm nhiều nhất đúng không ạ thì sau đó thì
-chúng ta có thể gõ bằng những chữ cái đầu tiên thì ví dụ như bạn để chúng ta tiếp tục tìm chủ đề thì chủ funny ấy Bạn có thể thấy không Funny Animal này funny Anime funny ai này funny animation này rất nhiều chủ đề funny thì bạn hãy chọn một cái chủ đề mà bạn cảm thấy là phù hợp với mình cảm thấy hứng thú khi bạn làm cái chủ đề này được không ạ Nếu như bạn vẫn không thích thì tiếp tục chúng ta có thể bấm vào chữ B để chúng chúng ta chọn được tiếp các cái chủ đề khác nhau ví dụ bạn thấy đấy ạ chủ đề funny baby funny B funny Bunny funny Bear
-và nếu chúng ta không thích thì chúng tiếp tục chúng ta tìm bằng các cái chữ cái Tiếp theo sẽ gợi ý cho bạn những cái chủ đề tìm kiếm về chủ đề f nhiều nhất rồi sau đó thì bạn hãy nhớ giúp mình đó là tìm ít nhất 10 từ khóa và sau đó nốt lại được chưa ạ Chúng ta sẽ sang Cách thứ hai đó là sử dụng Google để tìm kiếm thì chúng ta hãy tiếp tục với cả chủ đề funny nhé Hãy gõ cái từ khóa ví dụ đó là funny sau đó dấu cách ra thì bạn sẽ được các gợi ý mà người dùng hay tìm kiếm và sau đó là kéo xuống dưới cùng để có cái
-tìm kiếm liên quan mình sẽ hướng dẫn bạn luôn nhé Ok chúng ta vào Google rồi nếu như bạn không biết được là những cái ngách nhỏ hơn của cái chủ đề funny thì chúng ta hãy gõ funny sau đó enter được chưa ạ đó chúng ta sẽ kéo xuống dưới cùng thì các bạn có thể thấy đ ạ Đây là những cái từ khóa mà được người dùng người ta tìm kiếm người ta xem nhiều nhất người ta tìm kiếm nhiều nhất thì bạn hoàn toàn có có thể sử dụng những cái từ khóa này ví dụ như là mình thấy đây ch một chủ đề đó là game Funny đi đó game Funny
-đi Ok mình sẽ copy cái từ khóa này mình thả vào bên YouTube rồi và khi mình thả vào thì mình sẽ thấy được rất là nhiều cái kênh và mình hoàn toàn mình có thể tham khảo các cái kênh Hay là các cái dạng video ở đây đấy có rất nhiều nhiều lượt xem Đây là những lượt xem cao nhất thì thêm một mẹo nữa nhá thì bạn có thể sử dụng thêm cái bộ lọc đó tháng này bộ lọc ở đây để giúp bạn tìm ra được những cái video chất lượng nhất những video hay nhất đó đây chúng ta có rất là nhiều kênh đúng không ạ rất nhiều kênh trong 1 tháng trước hai
-ngày trước này đó rồi ok tiếp theo chúng ta sang cái Cách thứ ba đó là sử dụng Google chen thì chúng ta lại tiếp tục với cái chủ đề funny nhá thì khi mà sử dụng Google chen ấy thì bạn hãy gõ cái từ khóa ví dụ là funny để chúng ta có thể xem được cái lượng quan tâm của người dùng và khi mà bạn sử dụng Google chen ấy thì cái Google chen nó sẽ có cái tác dụng nó sẽ cung cấp cho bạn từ khóa quan tâm gần nhất với cái chủ đề của bạn khi mà người dùng YouTube hay tìm kiếm hay khi họ xem các chủ đề tương tự Okay nhá cụ thể nhá Mình sẽ hướng dẫn
-cho bạn luôn này chúng ta vào Google chan Ok chưa rồi sau đó thì chúng ta hãy gõ một cái từ khóa tìm kiếm cùng với chủ đề đó từ khóa fny rồi Bên cạnh đấy một chút nhá thì vì ý mình ấ mình thường mình sẽ hướng tới là các cái chủ đề funny view ngoại kiếm tiền view Ngoại nên là mình sẽ muốn hướng tới đó là Hoa Kỳ tại sao phải là mỹ Bởi vì đơn giản thôi Mỹ là họ trả tiền nhiều nhất trên a mỗi 1000 review Ok chúng ta sẽ gõ đây funny sau đó ấn khám phá rồi mình thay đổi một chút cái thông số nhá Tìm kiếm web này tìm kiếm trên
-YouTube này đó và mình muốn là tìm kiếm trong khoảng 90 ngày qua thì bạn hoàn toàn có thể thấy là cái cụm từ funny là một cái chủ đề mà rất là nhiều người quan tâm và gần như là nó ở mức cao nhất đúng không ạ Ai cũng muốn là trong cuộc sống mình có những tiếng cười thì tiếp theo ở dưới đây Chúng ta có thể thấy được là đây là những cái tiểu vùng những cái khu vực mà nhiều người họ xem cái chủ đề funny nhất ở trên đất nước Mỹ chúng ta hoàn toàn có thể dựa vàoo đây để sau này chúng ta sẽ target đúng đối tượng hơn tiếp theo nữa
-là dưới này đó là các cái từ khóa liên quan thì bạn có thể thấy ạ Ờ đây chủ đề về Funny Animal loại truyện tranh thì đây cũng là một trong những cái chủ đề mà bạn thấy không ạ Đây cũng cũng là một trong chủ đề mà người ta xem rất là nhiều thì chúng ta có thể thấy ở đây này đó đây các từ khóa liên quan này ví dụ như animal video Đột Phá tức là người ta xem rất là nhiều hay là những cái bức ảnh vui vẻ của động vật này đấy hay là truyện tranh cái bức tranh đấy dạng truyện tranh về động vật này hay là video Funny Animal Nếu mà không thích
-thì chúng ta có thể quay lại và chúng ta tìm tiếp ở cái khu vực này Chúng ta thấy đúng không ạ chủ đề funny paring tip này các cặp đôi thì bạn hoàn toàn có thể dựa vào đây chúng ta lấy những cái từ khóa và chúng ta đưa lên YouTube đúng không ạ Và chúng ta tìm kiếm thì sẽ ra bạn sẽ thấy được rằng là nó sẽ ra rất là nhiều những cái kênh và chúng ta có thể tham khảo cái đối thủ để chúng ta có thể là làm cái kênh của chúng ta một cách hiệu quả nhất đúng không ạ Đây là những cái kênh mà đang được tìm kiếm nhiều nhất đang được xem
-nhiều nhất và bạn hoàn toàn bạn có thể dựa vàoo đây để chúng là làm nên một cái video chất lượng hơn ok nhá và lưu ý giúp mình là khi mà sử dụng Google chan để tìm kiếm ấ thì hãy tìm và nốt lại 5 đến 10 từ khóa các bạn nhé rồi Tiếp theo cách thứ tư đó là chúng ta sử dụng cái công cụ viq thì mình nói qua một chút cho những bạn mà chưa nắm được về viq thì cái viq công cụ viq ấ nó có tác dụng đó là nó kiểm tra cái độ cạnh tranh của từ khóa này đó Cái lượt Tìm kiếm hàng tháng của từ khóa này gợi ý các cái từ khóa liên quan khi mà
-chúng ta up video và chấm điểm sale cho cái video đó cụ thể hơn thì mình sẽ đi vào này để cho các bạn hiểu này Ờ vi IQ đấy Bạn nhớ nhá vào cài cài extension with EQ này đó bấm vào thì vì mình đã cài rồi nên là mình sẽ không nói quá sâu về cái phần là cài đặt này nhá đó mình sẽ đi vào vấn đề luôn rồi mình sẽ tiếp tục mình sau khi mình mình tiếp tục mình chọn được cái chủ đề là funny parent Ring tip thì mình các bạn có thể xem này khi mình cài viq này các bạn thể xem này Đây là một cái chủ đề này đó B có thể thấy là đánh giá điểm
-nó là thấp 30/100 cái Dung lượng thì dung lượng người xem thì ở mức trung bình đó Cái độ cạnh tranh thì rất là cao và chúng ta có thể xem được là trung bình cái À cái view cao nhất nó rơi khoảng ba 36 triệu view và trung bình ấ nó rơi khoảng hơn 5 triệu view đó Ngoài ra thì khi mà chúng ta cài cái vi IQ ấy chúng ta có thể xem được là tot những cái kênh mà về cái cái chủ đề funny parenting tip này thì có đây đây là những kênh hàng đầu họ đang làm về cái chủ đề này thì chúng ta chúng ta hoàn toàn chúng ta có thể tham khảo các kênh
-từ đối thủ ngoài ra thì chúng ta sẽ có những cái từ khóa TC đó các bạn có thể thấy ở đây đó rồi Tiếp theo nhá là chúng ta có thể xem chúng ta sẽ có thể ví dụ như mình mình mình muốn là tham khảo cái video này vì rất là nhiều view đúng không ạ của đối thủ Ok thì tiếp theo đó khi mình bấm vào video thì bạn có thể xem này là cái lượt view của họ ấy đó đây hơn 2 triệu sub này 875 triệu view này rồi chúng ta có thể thể đấy là cái video này họ làm này được chưa ạ hơn 122 triệu view này cái điểm sale của họ là 57 trên 100 cũng là
-một cái điểm sale khá là cao Ngoài ra thì chúng ta có thể xem được các cái cái cái tag ấy các cái tag của cái kênh của họ đúng không ạ Họ t rất là nhiều chúng ta có thể dựa vàoo các cái t này để chúng ta Lọc ra các cái từ khóa cho mình Sau đó thì những cái vấn đề này Đây là những cái mà bạn cần quan tâm này đó Nó là video tag thì bạn hoàn hoàn toàn và bạn thấy các số đây không ạ Đấy là top những cái từ khóa mà đang dẫn đầu thì dựa vào những cái video T này chúng ta có thể copy chúng ta có thể tải về được chưa ạ
-Để lấy các cái từ khóa này và đưa lên trên mục tìm kiếm để chúng ta tiếp tục chúng ta tìm ra được những cái video hữu ích hơn bên cạnh đó thì bạn có thể thấy cái cột phía bên tay phải đúng không ạ đó sẽ cho bạn biết được là được là những cái chủ đề liên quan những cái kênh làm cùng về chủ đề liên quan ví dụ bạn thấy không ạ Đây ạ đó Hơn một triệu m lượt xem trong 2 tháng trước đúng không ạ đó đây các bạn có thể thấy và hoàn toàn chúng ta có thể tham khảo từ các mục này được chưa ạ OK nhá và hãy nhớ giúp mình đó là hãy tìm và nốt lại 10 cái từ khóa
-liên quan mà đang được xếp hạn ok chưa ạ và mình sẽ chia sẻ bạn là cách Cách thứ năm đó là cái cách mà mình vẫn đang làm Để tối ưu hóa được cái thời gian công sức trong cái việc tìm kiếm các key ngon đó là mình sử dụng cái công cụ TP thì cái công cụ t này thì nó có cái tác dụng gì đầu tiên ấ là nó tìm cái từ khóa một cách siêu nhanh luôn và xuất cái file từ khóa chỉ trong muốn bấm thôi cực kỳ tiết kiệm thời gian thứ hai đóa là tìm một cái chen giúp bạn tìm cái chen mới nhanh nhất thứ ba đó là video bạn tìm video và
-các cái kênh liên quan ấy cũng siêu nhanh luôn vẫ chỉ bằng một nút bấm thôi và thứ tư ấy đó là mình cái cái công cụ này nó có một cái hay nữ là lấy được cái video của đối thủ sau đó nó chuyển thành tex Và bạn hoàn toàn có thể sửa đổi lại cái tex của đối thủ biến nó thành content của mình được chưa ạ rồi thì mình sẽ giới thiệu bạn qua một chút về cái công cụ tu nhá Đây là công cụ mình đang sử dụng này là sẽ có là bạn sẽ tìm kiếm qua từ khóa đấy Tìm kiếm chen tìm kiếm qua video ra video đấy và tìm kiếm các kênh Hay là đây video totech đây thì
-mình sẽ chia sẻ một chút Thế nhá Ờ mình sẽ gõ cái từ khóa khi mà mình không Mình chỉ biết được là cái chủ đề mà mình muốn làm là chủ đề funny mình không biết được là các cái ngách nhỏ chuyên sâu ở bên trong ấy là gì thì mình gõ chung chung là funny sau đó đất nước vì mình làm view ngoại mình muốn tập trung vào thị trường Mỹ nên là mình đ United st us được chưa ạ sau đó sau khi mình generate các bạn có thể thấy được là nó sẽ xổ ra hàng hàng loạt các từ khóa đúng không ạ chúng ta không phải mất không phải thủ
-công làm những cái việc như trước nữa mà chúng ta hoàn toàn dựa vào cái từ khóa và các bạn để ý nhá Đây là phần rank này xếp hạng này đó thì chúng ta sẽ dựa vào cái xếp hạng này Đây là xếp hạng hàng đầu thì đây là những cái từ khóa mà được nhiều người tìm kiếm nhất nhiều người quan tâm nhất thì việc của chúng ta chỉ là copy các từ khóa này và đưa lên mục tìm kiếm đúng không ạ Và chúng ta sẽ ra được cái tìm được những cái cái kênh đối thủ để chúng ta tham khảo hay tìm được rất nhiều những cái nguồn video về funny mà
-bạn hoàn toàn có thể làm được chưa ạ tiếp theo thì mình giới thiệu một chút về cái phần chen này đây nó sẽ giúp bạn tìm chen thôi tiếp theo nữa đó là cái video thì về cái phần video ấy bạn hoàn toàn có thể gõ cái từ khóa vào đây đó và ấn ấn tìm kiếm thì nó sẽ ra cho bạn tất cả những cái video về cái chủ đề liên quan trong kênh funny Và bạn hoàn toàn có thể tham khảo các cái nguồn rất là nhanh đúng không ạ tiếp theo nó là về kênh thì cũng vẫn đây gõ vào chủ đề funny và nó sẽ ra tất cả những cái nguồn video à các cái nguồn kênh bao gồm
-cả các bạn thấy không ạ Đây nguồn kênh đấy kênh và hashtag này đó rất là nhiều luôn kéo xống cuối cùng này chúng ta có cả các cái thẻ tác này đúng không ạ các cái từ khóa để chúng ta chúng ta lấy về chúng ta tìm kiếm một cách nhanh hơn đó và ngoài ra thì tex video thì chúng ta chỉ cần thả cái đường link của video đấy vào thôi Ví dụ mình lấy một cái đường link link đó sau đó thì sau đó thì mình thả nó vào đây và mình chỉ ấn convert thôi là rất là nhanh đúng không ạ Chưa tới 1 giây là đã ra được toàn bộ cái text này
-rồi chúng ta có thể dùng cái tex này sửa đổi lại nội dung cho phù hợp và biến thành content của mình được chưa ạ Rồi hôm nay mình sã chia sẻ với bạn là năm cái cách để tìm từ khóa một cách đơn giản đó và khi bạn đã xem xong video này thì hãy like comment và subscribe vào kênh của mình nhé và để lại bất kỳ một cái com nào nếu như bạn thắc mắc rồi cảm ơn bạn rất là nhiều video dừng đến đây`;
-
         const defaultHistory: ChatMessage[] = [
             {
                 role: 'user',
@@ -186,9 +172,17 @@ rồi chúng ta có thể dùng cái tex này sửa đổi lại nội dung cho 
                 role: 'model',
                 parts: [{ text: 'Cảm ơn bạn. Tôi đã tiếp thu và ghi nhớ kiến thức về 5 phương pháp tìm kiếm và đánh giá từ khóa YouTube. Tôi sẽ áp dụng những chiến lược này vào các phân tích ngách trong tương lai để đưa ra kết quả chất lượng hơn.' }]
             },
+            {
+                role: 'user',
+                parts: [{ text: `Tuyệt vời. Bây giờ, hãy tiếp tục học hỏi cơ sở kiến thức sau đây về hàng trăm ngách và chủ đề YouTube tiềm năng. Đây là nguồn dữ liệu quan trọng để bạn đưa ra các đề xuất đa dạng và chính xác.\n\n--- BẮT ĐẦU CƠ SỞ KIẾN THỨC NGÁCH ---\n\n${nicheKnowledgeBase}\n\n--- KẾT THÚC CƠ SỞ KIẾN THỨC NGÁCH ---` }]
+            },
+            {
+                role: 'model',
+                parts: [{ text: 'Cảm ơn bạn. Tôi đã tiếp thu và ghi nhớ cơ sở kiến thức toàn diện về các ngách YouTube. Tôi sẽ sử dụng thông tin này để làm giàu và cải thiện độ chính xác cho các phân tích và đề xuất của mình.' }]
+            },
             { 
                 role: 'model', 
-                parts: [{ text: 'Chào bạn, tôi là AI phân tích ngách YouTube. Bạn có thể cung cấp thêm cho tôi bất kỳ kiến thức, tài liệu, hoặc văn bản nào để tôi học hỏi. Kiến thức này sẽ được tôi ghi nhớ và áp dụng để cải thiện chất lượng các phân tích.'}] 
+                parts: [{ text: 'Chào bạn, tôi là AI phân tích ngách YouTube, đã được trang bị kiến thức chuyên sâu. Bạn có thể cung cấp thêm cho tôi bất kỳ kiến thức, tài liệu, hoặc văn bản nào để tôi học hỏi thêm, hoặc bắt đầu tìm kiếm ý tưởng ngách ngay bây giờ.'}] 
             }
         ];
         setTrainingChatHistory(defaultHistory);
@@ -449,11 +443,14 @@ rồi chúng ta có thể dùng cái tex này sửa đổi lại nội dung cho 
   const handleToggleSaveNiche = (niche: Niche) => {
     setSavedNiches(prev => {
         const isSaved = prev.some(saved => saved.niche_name.original === niche.niche_name.original);
+        let newSavedNiches;
         if (isSaved) {
-            return prev.filter(saved => saved.niche_name.original !== niche.niche_name.original);
+            newSavedNiches = prev.filter(saved => saved.niche_name.original !== niche.niche_name.original);
         } else {
-            return [...prev, niche];
+            newSavedNiches = [...prev, niche];
         }
+        localStorage.setItem('savedNiches', JSON.stringify(newSavedNiches));
+        return newSavedNiches;
     });
   };
 
@@ -461,6 +458,13 @@ rồi chúng ta có thể dùng cái tex này sửa đổi lại nội dung cho 
     exportNichesToCsv(savedNiches, `saved_niches_${new Date().toISOString().split('T')[0]}.csv`);
   };
   
+  const handleClearSavedNiches = () => {
+    if (window.confirm(`Bạn có chắc chắn muốn xóa tất cả ${savedNiches.length} ý tưởng đã lưu không? Hành động này không thể hoàn tác.`)) {
+        setSavedNiches([]);
+        localStorage.removeItem('savedNiches');
+    }
+  };
+
   const handleSendTrainingMessage = async (message: string, files: File[]) => {
     const hasValidKey = apiKeyStatuses.includes('valid');
     if (apiKeys.length === 0 || !hasValidKey) {
@@ -631,7 +635,7 @@ rồi chúng ta có thể dùng cái tex này sửa đổi lại nội dung cho 
             
             {analysisResult && !isLoading ? (
                 <>
-                    <ActionBar savedCount={savedNiches.length} onExport={handleExportSaved} />
+                    <ActionBar savedCount={savedNiches.length} onExport={handleExportSaved} onClearSaved={handleClearSavedNiches} />
                     <ResultsDisplay 
                       result={analysisResult} 
                       onDevelop={handleDevelopIdea}

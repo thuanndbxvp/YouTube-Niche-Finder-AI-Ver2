@@ -64,7 +64,7 @@ const App: React.FC = () => {
   const [customMarket, setCustomMarket] = useState<string>('');
   const [analysisDepth, setAnalysisDepth] = useState<number>(0);
   const [savedNiches, setSavedNiches] = useState<Niche[]>([]);
-  const [numResults, setNumResults] = useState<string>('Auto');
+  const [numResults, setNumResults] = useState<string>('5');
 
   // Filters
   const [interestLevel, setInterestLevel] = useState<FilterLevel>('all');
@@ -297,7 +297,7 @@ rồi chúng ta có thể dùng cái tex này sửa đổi lại nội dung cho 
     }
   
     const marketToAnalyze = targetMarket === 'Custom' ? customMarket : targetMarket;
-    const countToGenerate = numResults === 'Auto' ? 5 : parseInt(numResults, 10);
+    const countToGenerate = parseInt(numResults, 10);
   
     try {
       const options = {
@@ -567,7 +567,7 @@ rồi chúng ta có thể dùng cái tex này sửa đổi lại nội dung cho 
                             className="w-full p-3 bg-gray-800 border-2 border-gray-700 rounded-lg focus:ring-2 focus:ring-teal-400 focus:border-teal-400 outline-none transition-all duration-300"
                             disabled={isLoading}
                         >
-                            <option value="Auto">Auto (5)</option>
+                            <option value="5">5</option>
                             <option value="10">10</option>
                             <option value="15">15</option>
                             <option value="20">20</option>

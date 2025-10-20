@@ -19,7 +19,7 @@ interface ResultsDisplayProps {
 
 const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onDevelop, analysisDepth, onLoadMore, isLoadingMore, onToggleSave, savedNiches, onUseNiche, generatingContentForNiche, contentPlanCache, numResults }) => {
   
-  const numToAdd = numResults === 'Auto' ? 5 : parseInt(numResults, 10);
+  const numToAdd = parseInt(numResults, 10);
 
   return (
     <div className="w-full flex flex-col gap-8">

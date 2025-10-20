@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { analyzeNicheIdea, getTrainingResponse, generateContentPlan, validateApiKey } from './services/geminiService';
-import type { AnalysisResult, ChatMessage, Part, Niche, FilterLevel, ContentPlanResult } from './types';
+import type { AnalysisResult, ChatMessage, Part, Niche, FilterLevel, ContentPlanResult, Notification as NotificationType } from './types';
 import SearchBar from './components/SearchBar';
 import ResultsDisplay from './components/ResultsDisplay';
 import Loader from './components/Loader';
@@ -13,6 +13,7 @@ import { exportNichesToCsv } from './utils/export';
 import PasswordModal from './components/PasswordModal';
 import ContentPlanModal from './components/ContentPlanModal';
 import ErrorModal from './components/ErrorModal';
+import NotificationCenter from './components/NotificationCenter';
 
 export type ApiKeyStatus = 'idle' | 'checking' | 'valid' | 'invalid';
 
@@ -88,10 +89,13 @@ const App: React.FC = () => {
   // Content Plan State
   const [contentPlan, setContentPlan] = useState<ContentPlanResult | null>(null);
   const [isContentPlanModalOpen, setIsContentPlanModalOpen] = useState<boolean>(false);
-  const [generatingContentForNiche, setGeneratingContentForNiche] = useState<string | null>(null);
+  const [generatingNiches, setGeneratingNiches] = useState<Set<string>>(new Set());
   const [contentPlanCache, setContentPlanCache] = useState<Record<string, ContentPlanResult>>({});
   const [activeNicheForContentPlan, setActiveNicheForContentPlan] = useState<Niche | null>(null);
   const [isContentPlanLoadingMore, setIsContentPlanLoadingMore] = useState<boolean>(false);
+  
+  // Notifications State
+  const [notifications, setNotifications] = useState<NotificationType[]>([]);
 
   // Helper function to validate keys and set statuses
   const checkAndSetApiKeys = async (keysToCheck: string[]) => {
@@ -336,42 +340,61 @@ rồi chúng ta có thể dùng cái tex này sửa đổi lại nội dung cho 
   const handleDevelopIdea = (idea: string) => runAnalysis(idea, false);
   const handleLoadMore = () => runAnalysis(userInput, false, true);
   
+  const removeNotification = (id: number) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  };
+  
   const handleUseNiche = async (niche: Niche) => {
-    // 1. Check cache first
-    const cachedPlan = contentPlanCache[niche.niche_name.original];
-    if (cachedPlan) {
-        setContentPlan(cachedPlan);
-        setActiveNicheForContentPlan(niche);
-        setIsContentPlanModalOpen(true);
-        return;
-    }
+    const nicheName = niche.niche_name.original;
+    if (generatingNiches.has(nicheName)) return;
 
-    // 2. If not in cache, proceed with API call
     const hasValidKey = apiKeyStatuses.includes('valid');
     if (apiKeys.length === 0 || !hasValidKey) {
       showNoApiKeyError();
       return;
     }
-    setGeneratingContentForNiche(niche.niche_name.original);
+
+    setGeneratingNiches(prev => new Set(prev).add(nicheName));
     setError(null);
+
     try {
         const { result, successfulKeyIndex } = await generateContentPlan(niche, apiKeys, trainingChatHistory);
         setActiveApiKeyIndex(successfulKeyIndex);
         
-        // 3. Save to state and cache
-        setContentPlan(result);
         setContentPlanCache(prevCache => ({
             ...prevCache,
-            [niche.niche_name.original]: result
+            [nicheName]: result
         }));
-        setActiveNicheForContentPlan(niche);
-        setIsContentPlanModalOpen(true);
+        
+        setNotifications(prev => [...prev, {
+            id: Date.now(),
+            message: `Đã tạo xong kế hoạch cho niche: "${niche.niche_name.translated}"`,
+            type: 'success'
+        }]);
+
     } catch (err: any) {
         console.error(err);
-        setError({ title: 'Không thể tạo kế hoạch', body: `Lỗi: ${err.message || 'Vui lòng thử lại.'}` });
+        setNotifications(prev => [...prev, {
+            id: Date.now(),
+            message: `Lỗi khi tạo kế hoạch cho niche: "${niche.niche_name.translated}". ${err.message || 'Vui lòng thử lại.'}`,
+            type: 'error'
+        }]);
         setActiveApiKeyIndex(null);
     } finally {
-        setGeneratingContentForNiche(null);
+        setGeneratingNiches(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(nicheName);
+            return newSet;
+        });
+    }
+  };
+
+  const handleViewPlan = (niche: Niche) => {
+    const cachedPlan = contentPlanCache[niche.niche_name.original];
+    if (cachedPlan) {
+        setContentPlan(cachedPlan);
+        setActiveNicheForContentPlan(niche);
+        setIsContentPlanModalOpen(true);
     }
   };
   
@@ -504,6 +527,7 @@ rồi chúng ta có thể dùng cái tex này sửa đổi lại nội dung cho 
 
   return (
     <div className="min-h-screen bg-gray-900 font-sans text-gray-200">
+      <NotificationCenter notifications={notifications} onRemove={removeNotification} />
       <header className="absolute top-0 right-0 p-4 z-10">
         <div className="flex items-center space-x-2">
             <button
@@ -617,7 +641,8 @@ rồi chúng ta có thể dùng cái tex này sửa đổi lại nội dung cho 
                       onToggleSave={handleToggleSaveNiche}
                       savedNiches={savedNiches}
                       onUseNiche={handleUseNiche}
-                      generatingContentForNiche={generatingContentForNiche}
+                      onViewPlan={handleViewPlan}
+                      generatingNiches={generatingNiches}
                       contentPlanCache={contentPlanCache}
                       numResults={numResults}
                     />

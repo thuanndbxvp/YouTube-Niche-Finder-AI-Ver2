@@ -22,6 +22,7 @@ interface NicheCardProps {
   onToggleSave: (niche: Niche) => void;
   isSaved: boolean;
   onUseNiche: (niche: Niche) => void;
+  onViewPlan: (niche: Niche) => void;
   isGeneratingContent: boolean;
   hasContentPlan: boolean;
 }
@@ -68,7 +69,7 @@ const AnalysisMetric: React.FC<AnalysisMetricProps> = ({ icon, label, score, exp
 };
 
 
-const NicheCard: React.FC<NicheCardProps> = ({ niche, index, onDevelop, analysisDepth, onToggleSave, isSaved, onUseNiche, isGeneratingContent, hasContentPlan }) => {
+const NicheCard: React.FC<NicheCardProps> = ({ niche, index, onDevelop, analysisDepth, onToggleSave, isSaved, onUseNiche, onViewPlan, isGeneratingContent, hasContentPlan }) => {
 
     return (
         <div className={`border border-gray-700 rounded-2xl shadow-lg p-6 w-full text-left transition-all duration-300 hover:border-teal-500 hover:shadow-teal-500/10 flex flex-col ${index % 2 === 0 ? 'bg-gray-800/50' : 'bg-gray-800/80'}`}>
@@ -158,7 +159,7 @@ const NicheCard: React.FC<NicheCardProps> = ({ niche, index, onDevelop, analysis
 
                 {analysisDepth >= 1 && (
                      <button
-                        onClick={() => onUseNiche(niche)}
+                        onClick={() => hasContentPlan ? onViewPlan(niche) : onUseNiche(niche)}
                         disabled={isGeneratingContent}
                         className={`w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 text-white font-semibold rounded-lg shadow-md transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed ${
                             hasContentPlan ? 'bg-teal-600 hover:bg-teal-700' : 'bg-green-600 hover:bg-green-700'

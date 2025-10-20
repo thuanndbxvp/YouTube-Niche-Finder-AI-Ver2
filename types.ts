@@ -68,3 +68,9 @@ export interface DetailedVideoContent {
 export interface ContentPlanResult {
   content_ideas: DetailedVideoContent[];
 }
+
+export interface Notification {
+  id: number;
+  message: string;
+  type: 'success' | 'error';
+}

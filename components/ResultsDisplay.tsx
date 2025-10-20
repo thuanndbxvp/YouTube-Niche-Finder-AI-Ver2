@@ -12,12 +12,13 @@ interface ResultsDisplayProps {
   onToggleSave: (niche: Niche) => void;
   savedNiches: Niche[];
   onUseNiche: (niche: Niche) => void;
-  generatingContentForNiche: string | null;
+  onViewPlan: (niche: Niche) => void;
+  generatingNiches: Set<string>;
   contentPlanCache: Record<string, ContentPlanResult>;
   numResults: string;
 }
 
-const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onDevelop, analysisDepth, onLoadMore, isLoadingMore, onToggleSave, savedNiches, onUseNiche, generatingContentForNiche, contentPlanCache, numResults }) => {
+const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onDevelop, analysisDepth, onLoadMore, isLoadingMore, onToggleSave, savedNiches, onUseNiche, onViewPlan, generatingNiches, contentPlanCache, numResults }) => {
   
   const numToAdd = parseInt(numResults, 10);
 
@@ -26,6 +27,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onDevelop, anal
       {result.niches.map((niche, index) => {
         const isSaved = savedNiches.some(saved => saved.niche_name.original === niche.niche_name.original);
         const hasContentPlan = !!contentPlanCache[niche.niche_name.original];
+        const isGenerating = generatingNiches.has(niche.niche_name.original);
         return (
             <NicheCard 
               key={`${niche.niche_name.original}-${index}`} 
@@ -36,7 +38,8 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onDevelop, anal
               onToggleSave={onToggleSave}
               isSaved={isSaved}
               onUseNiche={onUseNiche}
-              isGeneratingContent={generatingContentForNiche === niche.niche_name.original}
+              onViewPlan={onViewPlan}
+              isGeneratingContent={isGenerating}
               hasContentPlan={hasContentPlan}
             />
         );

@@ -1,3 +1,4 @@
+
 // Fix: Implement Gemini API service functions.
 import { GoogleGenAI, Type, Content } from "@google/genai";
 import type { AnalysisResult, ChatMessage, FilterLevel, Niche, ContentPlanResult, VideoIdea } from '../types';
@@ -456,8 +457,8 @@ const videoIdeasResponseSchema = {
     required: ["video_ideas"]
 };
 
-const videoIdeasSystemInstruction = (nicheName: string) => {
-    return `You are an expert YouTube Content Strategist. Your task is to generate 5 creative and engaging video ideas for the provided niche.
+const videoIdeasSystemInstruction = (nicheName: string, existingIdeasToAvoid: string[]) => {
+    let instruction = `You are an expert YouTube Content Strategist. Your task is to generate 5 creative and engaging video ideas for the provided niche.
 The niche is defined by its name, which is in the target market's language (likely English).
 Base your video ideas solely on this original niche name.
 
@@ -470,15 +471,22 @@ IMPORTANT: For your output, follow these rules:
   - Name: ${nicheName}
   
 Generate exactly 5 distinct and creative video ideas.`;
+
+    if (existingIdeasToAvoid.length > 0) {
+        instruction += `\n\nIMPORTANT: You have already suggested the following video ideas. DO NOT suggest them again or anything too similar. Be creative and find new angles. Ideas to avoid: ${existingIdeasToAvoid.join(', ')}.`;
+    }
+
+    return instruction;
 };
 
 export const generateVideoIdeasForNiche = async (
     niche: Niche,
     apiKeys: string[],
-    trainingHistory: ChatMessage[]
+    trainingHistory: ChatMessage[],
+    options: { existingIdeasToAvoid?: string[] } = {}
 ): Promise<{ result: { video_ideas: VideoIdea[] }, successfulKeyIndex: number }> => {
+    const { existingIdeasToAvoid = [] } = options;
     const modelName = 'gemini-2.5-flash';
-    // This prompt is now direct and in English to match the context of the niche name.
     const userPrompt = `Please generate 5 video ideas for the YouTube niche: "${niche.niche_name.original}".`;
     
     const contents: Content[] = [
@@ -499,7 +507,7 @@ export const generateVideoIdeasForNiche = async (
             model: modelName,
             contents: contents,
             config: {
-                systemInstruction: videoIdeasSystemInstruction(niche.niche_name.original),
+                systemInstruction: videoIdeasSystemInstruction(niche.niche_name.original, existingIdeasToAvoid),
                 responseMimeType: "application/json",
                 responseSchema: videoIdeasResponseSchema
             }

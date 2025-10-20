@@ -379,14 +379,17 @@ const App: React.FC = () => {
     setError(null);
 
     try {
-        const { result, successfulKeyIndex } = await generateVideoIdeasForNiche(nicheToUpdate, apiKeys, trainingChatHistory);
+        const existingTitles = nicheToUpdate.video_ideas?.map(idea => idea.title.original) || [];
+        const { result, successfulKeyIndex } = await generateVideoIdeasForNiche(nicheToUpdate, apiKeys, trainingChatHistory, { existingIdeasToAvoid: existingTitles });
         setActiveApiKeyIndex(successfulKeyIndex);
 
         setAnalysisResult(prevResult => {
             if (!prevResult) return null;
             const newNiches = prevResult.niches.map(niche => {
                 if (niche.niche_name.original === nicheName) {
-                    return { ...niche, video_ideas: result.video_ideas };
+                    const existingIdeas = niche.video_ideas || [];
+                    const newIdeas = result.video_ideas || [];
+                    return { ...niche, video_ideas: [...existingIdeas, ...newIdeas] };
                 }
                 return niche;
             });

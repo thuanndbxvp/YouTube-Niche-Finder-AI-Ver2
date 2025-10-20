@@ -1,3 +1,4 @@
+
 // Fix: Implement the NicheCard component to display analysis results.
 import React from 'react';
 import type { Niche } from '../types';
@@ -138,74 +139,82 @@ const NicheCard: React.FC<NicheCardProps> = ({ niche, index, onDevelop, analysis
                             </div>
                         ) : (
                              <div className="flex justify-center items-center p-4 bg-gray-900/50 rounded-lg border border-dashed border-gray-700/50">
-                                <button
-                                    onClick={() => onGenerateVideoIdeas(niche)}
-                                    disabled={isGeneratingIdeas}
-                                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {isGeneratingIdeas ? (
-                                        <>
-                                            <div className="w-5 h-5 border-2 border-t-white border-indigo-800 rounded-full animate-spin"></div>
-                                            <span>Đang tạo...</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <LightBulbIcon />
-                                            <span>Tạo Ý tưởng Video</span>
-                                        </>
-                                    )}
-                                </button>
+                                <p className="text-gray-500 italic">Hãy bấm nút Ý tưởng video để tạo nội dung gợi ý.</p>
                             </div>
                         )}
                     </div>
                 </div>
             </div>
 
-            <div className="mt-6 pt-4 border-t border-gray-700/60 flex flex-col sm:flex-row items-center justify-end gap-3">
-                 <button
-                    onClick={() => onToggleSave(niche)}
-                    className={`w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 ${
-                        isSaved 
-                            ? 'bg-teal-600 text-white hover:bg-teal-700' 
-                            : 'bg-gray-600 text-gray-300 hover:bg-gray-500 hover:text-white'
-                    }`}
-                >
-                    <SaveIcon />
-                    <span>{isSaved ? 'Đã lưu' : 'Lưu kết quả'}</span>
-                </button>
-                
-                {analysisDepth === 1 && (
-                     <button
-                        onClick={() => onDevelop(niche.niche_name.original)}
-                        disabled={isGeneratingContent}
-                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+            <div className="mt-6 pt-4 border-t border-gray-700/60 flex flex-col sm:flex-row items-center justify-between gap-3">
+                {/* Left-aligned button */}
+                <div>
+                    <button
+                        onClick={() => onGenerateVideoIdeas(niche)}
+                        disabled={isGeneratingIdeas}
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        <ChevronDoubleRightIcon />
-                        <span>Phát triển thêm ý tưởng</span>
-                    </button>
-                )}
-
-                {analysisDepth >= 1 && (hasVideoIdeas || hasContentPlan) && (
-                     <button
-                        onClick={() => hasContentPlan ? onViewPlan(niche) : onUseNiche(niche)}
-                        disabled={isGeneratingContent}
-                        className={`w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 text-white font-semibold rounded-lg shadow-md transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed ${
-                            hasContentPlan ? 'bg-teal-600 hover:bg-teal-700' : 'bg-green-600 hover:bg-green-700'
-                        }`}
-                    >
-                        {isGeneratingContent ? (
+                        {isGeneratingIdeas ? (
                             <>
-                                <div className="w-5 h-5 border-2 border-t-white border-green-800 rounded-full animate-spin"></div>
+                                <div className="w-5 h-5 border-2 border-t-white border-indigo-800 rounded-full animate-spin"></div>
                                 <span>Đang tạo...</span>
                             </>
                         ) : (
-                             <>
-                                <CheckCircleIcon />
-                                <span>{hasContentPlan ? 'Xem lại kế hoạch' : 'Sử dụng Niche này'}</span>
+                            <>
+                                <LightBulbIcon />
+                                <span>{hasVideoIdeas ? 'Thêm ý tưởng Video' : 'Tạo Ý tưởng Video'}</span>
                             </>
                         )}
                     </button>
-                )}
+                </div>
+
+                {/* Right-aligned buttons */}
+                <div className="flex flex-col sm:flex-row items-center justify-end gap-3 w-full sm:w-auto">
+                    <button
+                        onClick={() => onToggleSave(niche)}
+                        className={`w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 ${
+                            isSaved 
+                                ? 'bg-teal-600 text-white hover:bg-teal-700' 
+                                : 'bg-gray-600 text-gray-300 hover:bg-gray-500 hover:text-white'
+                        }`}
+                    >
+                        <SaveIcon />
+                        <span>{isSaved ? 'Đã lưu' : 'Lưu kết quả'}</span>
+                    </button>
+                    
+                    {analysisDepth === 1 && (
+                        <button
+                            onClick={() => onDevelop(niche.niche_name.original)}
+                            disabled={isGeneratingContent}
+                            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <ChevronDoubleRightIcon />
+                            <span>Phát triển thêm ý tưởng</span>
+                        </button>
+                    )}
+
+                    {analysisDepth >= 1 && (hasVideoIdeas || hasContentPlan) && (
+                        <button
+                            onClick={() => hasContentPlan ? onViewPlan(niche) : onUseNiche(niche)}
+                            disabled={isGeneratingContent}
+                            className={`w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 text-white font-semibold rounded-lg shadow-md transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed ${
+                                hasContentPlan ? 'bg-teal-600 hover:bg-teal-700' : 'bg-green-600 hover:bg-green-700'
+                            }`}
+                        >
+                            {isGeneratingContent ? (
+                                <>
+                                    <div className="w-5 h-5 border-2 border-t-white border-green-800 rounded-full animate-spin"></div>
+                                    <span>Đang tạo...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <CheckCircleIcon />
+                                    <span>{hasContentPlan ? 'Xem lại kế hoạch' : 'Sử dụng Niche này'}</span>
+                                </>
+                            )}
+                        </button>
+                    )}
+                </div>
             </div>
         </div>
     );

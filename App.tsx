@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { analyzeNicheIdea, getTrainingResponse, generateContentPlan } from './services/geminiService';
+import { analyzeNicheIdea, getTrainingResponse, generateContentPlan, validateApiKey } from './services/geminiService';
 import type { AnalysisResult, ChatMessage, Part, Niche, FilterLevel, ContentPlanResult } from './types';
 import SearchBar from './components/SearchBar';
 import ResultsDisplay from './components/ResultsDisplay';
@@ -12,7 +12,9 @@ import ActionBar from './components/ActionBar';
 import { exportNichesToCsv } from './utils/export';
 import PasswordModal from './components/PasswordModal';
 import ContentPlanModal from './components/ContentPlanModal';
+import ErrorModal from './components/ErrorModal';
 
+export type ApiKeyStatus = 'idle' | 'checking' | 'valid' | 'invalid';
 
 // Helper to convert File to a part for Gemini API
 async function fileToGenerativePart(file: File): Promise<Part> {
@@ -57,7 +59,7 @@ const App: React.FC = () => {
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ title: string; body: React.ReactNode; actionText?: string; onAction?: () => void; } | null>(null);
   const [targetMarket, setTargetMarket] = useState<string>('Quốc tế');
   const [customMarket, setCustomMarket] = useState<string>('');
   const [analysisDepth, setAnalysisDepth] = useState<number>(0);
@@ -70,6 +72,7 @@ const App: React.FC = () => {
   const [sustainabilityLevel, setSustainabilityLevel] = useState<FilterLevel>('all');
 
   const [apiKeys, setApiKeys] = useState<string[]>([]);
+  const [apiKeyStatuses, setApiKeyStatuses] = useState<ApiKeyStatus[]>([]);
   const [activeApiKeyIndex, setActiveApiKeyIndex] = useState<number | null>(null);
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState<boolean>(false);
   const [isTrainAiModalOpen, setIsTrainAiModalOpen] = useState<boolean>(false);
@@ -94,7 +97,9 @@ const App: React.FC = () => {
     try {
       const storedApiKeys = localStorage.getItem('geminiApiKeys');
       if (storedApiKeys) {
-        setApiKeys(JSON.parse(storedApiKeys));
+        const parsedKeys = JSON.parse(storedApiKeys);
+        setApiKeys(parsedKeys);
+        setApiKeyStatuses(parsedKeys.map(() => 'idle' as ApiKeyStatus));
       }
     } catch (e) {
       console.error("Could not parse API keys from localStorage", e);
@@ -162,11 +167,23 @@ rồi chúng ta có thể dùng cái tex này sửa đổi lại nội dung cho 
   
   const markets = ['Quốc tế', 'US/Canada', 'Anh', 'Úc', 'Đức', 'Pháp', 'Việt Nam', 'Nhật', 'Hàn', 'Custom'];
 
-  const handleSaveApiKeys = (newApiKeys: string[]) => {
+  const handleSaveAndCheckApiKeys = async (newApiKeys: string[]) => {
+    // Save keys first to update the UI list
     setApiKeys(newApiKeys);
     localStorage.setItem('geminiApiKeys', JSON.stringify(newApiKeys));
-    setIsApiKeyModalOpen(false);
+
+    // Set all statuses to 'checking'
+    const initialStatuses: ApiKeyStatus[] = newApiKeys.map(() => 'checking');
+    setApiKeyStatuses(initialStatuses);
+    
+    // Validate each key
+    const validationPromises = newApiKeys.map(key => validateApiKey(key));
+    const results = await Promise.all(validationPromises);
+    
+    const finalStatuses = results.map(isValid => (isValid ? 'valid' : 'invalid'));
+    setApiKeyStatuses(finalStatuses);
   };
+
 
   const updateTrainingHistory = (newHistory: ChatMessage[]) => {
       setTrainingChatHistory(newHistory);
@@ -194,17 +211,43 @@ rồi chúng ta có thể dùng cái tex này sửa đổi lại nội dung cho 
     setIsPasswordModalOpen(true);
   };
 
+  const showNoApiKeyError = () => {
+    setError({
+        title: 'Yêu cầu API Key',
+        body: (
+          <>
+            <p className="mb-4">Vui lòng nhập ít nhất một API Key bằng cách bấm vào nút "API" ở góc trên bên phải để sử dụng công cụ.</p>
+            <div className="text-left bg-gray-900/50 p-3 rounded-lg border border-gray-700">
+              <h4 className="font-semibold text-gray-200 mb-2">Làm thế nào để lấy API Key?</h4>
+              <ol className="list-decimal list-inside text-gray-400 text-sm space-y-1">
+                <li>Truy cập <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-teal-400 hover:underline">Google AI Studio</a>.</li>
+                <li>Đăng nhập bằng tài khoản Google của bạn.</li>
+                <li>Nhấp vào nút "Get API Key" hoặc "Create API key".</li>
+                <li>Sao chép key và dán vào công cụ của chúng tôi thông qua nút "API".</li>
+              </ol>
+            </div>
+          </>
+        ),
+        actionText: 'Cài đặt API',
+        onAction: () => {
+            setError(null);
+            setIsApiKeyModalOpen(true);
+        }
+    });
+  };
+
   const runAnalysis = async (idea: string, isNewSearch: boolean, isLoadMore: boolean = false) => {
-    if (apiKeys.length === 0) {
-      setError('Vui lòng nhập ít nhất một API Key bằng cách bấm vào nút "API" ở góc trên bên phải.');
+    const hasValidKey = apiKeyStatuses.includes('valid');
+    if (apiKeys.length === 0 || !hasValidKey) {
+      showNoApiKeyError();
       return;
     }
     if (!idea.trim()) {
-      setError('Vui lòng nhập một ý tưởng ngách.');
+      setError({ title: 'Lỗi đầu vào', body: 'Vui lòng nhập một ý tưởng ngách.' });
       return;
     }
     if (targetMarket === 'Custom' && !customMarket.trim()) {
-      setError('Vui lòng nhập thị trường tùy chỉnh.');
+      setError({ title: 'Lỗi đầu vào', body: 'Vui lòng nhập thị trường tùy chỉnh.' });
       return;
     }
   
@@ -248,7 +291,7 @@ rồi chúng ta có thể dùng cái tex này sửa đổi lại nội dung cho 
 
     } catch (err: any) {
       console.error(err);
-      setError(`Không thể phân tích. Lỗi: ${err.message || 'Vui lòng kiểm tra lại API Keys và thử lại.'}`);
+      setError({ title: 'Không thể phân tích', body: `Lỗi: ${err.message || 'Vui lòng kiểm tra lại API Keys và thử lại.'}` });
       setActiveApiKeyIndex(null);
     } finally {
       setIsLoading(false);
@@ -271,8 +314,9 @@ rồi chúng ta có thể dùng cái tex này sửa đổi lại nội dung cho 
     }
 
     // 2. If not in cache, proceed with API call
-    if (apiKeys.length === 0) {
-      setError('Vui lòng cấu hình API Key trước khi tạo kế hoạch nội dung.');
+    const hasValidKey = apiKeyStatuses.includes('valid');
+    if (apiKeys.length === 0 || !hasValidKey) {
+      showNoApiKeyError();
       return;
     }
     setGeneratingContentForNiche(niche.niche_name.original);
@@ -291,7 +335,7 @@ rồi chúng ta có thể dùng cái tex này sửa đổi lại nội dung cho 
         setIsContentPlanModalOpen(true);
     } catch (err: any) {
         console.error(err);
-        setError(`Không thể tạo kế hoạch nội dung. Lỗi: ${err.message || 'Vui lòng thử lại.'}`);
+        setError({ title: 'Không thể tạo kế hoạch', body: `Lỗi: ${err.message || 'Vui lòng thử lại.'}` });
         setActiveApiKeyIndex(null);
     } finally {
         setGeneratingContentForNiche(null);
@@ -315,8 +359,9 @@ rồi chúng ta có thể dùng cái tex này sửa đổi lại nội dung cho 
   };
   
   const handleSendTrainingMessage = async (message: string, files: File[]) => {
-    if (apiKeys.length === 0) {
-        const errorMsg: ChatMessage = { role: 'model', parts: [{ text: "Lỗi: Vui lòng cấu hình API Key của bạn trước khi bắt đầu cuộc hội thoại."}] };
+    const hasValidKey = apiKeyStatuses.includes('valid');
+    if (apiKeys.length === 0 || !hasValidKey) {
+        const errorMsg: ChatMessage = { role: 'model', parts: [{ text: "Lỗi: Vui lòng cấu hình API Key hợp lệ trước khi bắt đầu cuộc hội thoại."}] };
         updateTrainingHistory([...trainingChatHistory, errorMsg]);
         return;
     }
@@ -375,10 +420,23 @@ rồi chúng ta có thể dùng cái tex này sửa đổi lại nội dung cho 
     </div>
   );
 
+  const hasValidApiKey = apiKeyStatuses.includes('valid');
+
   return (
     <div className="min-h-screen bg-gray-900 font-sans text-gray-200">
       <header className="absolute top-0 right-0 p-4 z-10">
         <div className="flex items-center space-x-2">
+            <button
+                onClick={() => setIsApiKeyModalOpen(true)}
+                className={`px-4 py-2 rounded-md text-sm font-semibold text-white transition-colors duration-300 border ${
+                    hasValidApiKey
+                        ? 'bg-green-600 hover:bg-green-700 border-green-500'
+                        : 'bg-orange-500 hover:bg-orange-600 border-orange-400'
+                }`}
+                aria-label="Nhập API Key"
+            >
+                API
+            </button>
             <button
                 onClick={() => {
                     setPasswordModalMode('login');
@@ -390,21 +448,13 @@ rồi chúng ta có thể dùng cái tex này sửa đổi lại nội dung cho 
                 <BrainIcon />
                 <span>Train AI Tool</span>
             </button>
-            <button
-                onClick={() => setIsApiKeyModalOpen(true)}
-                className="flex items-center space-x-2 px-3 py-2 bg-gray-800/80 border border-gray-700 rounded-md text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
-                aria-label="Nhập API Key"
-            >
-                <KeyIcon />
-                <span>API</span>
-            </button>
         </div>
       </header>
       
       <main className="container mx-auto px-4 py-8 md:py-16">
         <div className="max-w-4xl mx-auto flex flex-col items-center text-center space-y-8">
           <Logo />
-          <p className="text-lg text-gray-400 max-w-2xl">
+          <p className="text-base text-gray-400 max-w-2xl">
             Nhập một ý tưởng, từ khóa, hoặc đam mê. AI của chúng tôi sẽ phân tích các chiến lược thành công trên YouTube để đề xuất những ngách có tiềm năng cao và ý tưởng video viral.
           </p>
 
@@ -456,7 +506,6 @@ rồi chúng ta có thể dùng cái tex này sửa đổi lại nội dung cho 
           
           <div className="w-full pt-8">
             {isLoading && <Loader />}
-            {error && <p className="text-red-400 bg-red-900/50 p-3 rounded-lg">{error}</p>}
             
             {analysisResult && !isLoading ? (
                 <>
@@ -486,9 +535,10 @@ rồi chúng ta có thể dùng cái tex này sửa đổi lại nội dung cho 
       <ApiKeyModal
         isOpen={isApiKeyModalOpen}
         onClose={() => setIsApiKeyModalOpen(false)}
-        onSave={handleSaveApiKeys}
+        onSaveAndCheck={handleSaveAndCheckApiKeys}
         currentApiKeys={apiKeys}
         activeApiKeyIndex={activeApiKeyIndex}
+        apiKeyStatuses={apiKeyStatuses}
       />
       <TrainAiModal
         isOpen={isTrainAiModalOpen}
@@ -511,6 +561,15 @@ rồi chúng ta có thể dùng cái tex này sửa đổi lại nội dung cho 
         contentPlan={contentPlan}
         activeNiche={activeNicheForContentPlan}
       />
+      <ErrorModal
+        isOpen={!!error}
+        onClose={() => setError(null)}
+        title={error?.title || 'Đã có lỗi xảy ra'}
+        actionText={error?.actionText}
+        onAction={error?.onAction}
+      >
+        {error?.body}
+      </ErrorModal>
     </div>
   );
 };

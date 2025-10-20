@@ -369,3 +369,21 @@ export const generateContentPlan = async (
     const { result, successfulKeyIndex } = await executeWithRetry(apiKeys, action);
     return { result, successfulKeyIndex };
 };
+
+export const validateApiKey = async (apiKey: string): Promise<boolean> => {
+    if (!apiKey.trim()) return false;
+    try {
+        const ai = getGenAI(apiKey);
+        // Use a simple, non-costly call to check validity.
+        // This confirms the key is authenticated and has the correct permissions.
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: 'Hello'
+        });
+        // Ensure we got some kind of response text
+        return !!response.text;
+    } catch (error) {
+        console.error(`API Key validation failed for key ending in ...${apiKey.slice(-4)}`, error);
+        return false;
+    }
+};

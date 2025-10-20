@@ -139,7 +139,8 @@ interface AnalysisOptions {
 
 const executeWithRetry = async <T>(
     apiKeys: string[], 
-    action: (ai: GoogleGenAI) => Promise<T>
+    action: (ai: GoogleGenAI) => Promise<T>,
+    onKeyFailure: (index: number) => void
 ): Promise<{ result: T; successfulKeyIndex: number }> => {
     if (!apiKeys || apiKeys.length === 0) {
         throw new Error("Vui lòng cung cấp ít nhất một API Key.");
@@ -156,6 +157,7 @@ const executeWithRetry = async <T>(
             return { result, successfulKeyIndex: i };
         } catch (err) {
             console.error(`API Key bắt đầu bằng "${key.substring(0, 4)}..." đã thất bại. Đang thử key tiếp theo.`, err);
+            onKeyFailure(i);
             lastError = err as Error;
         }
     }
@@ -169,7 +171,8 @@ export const analyzeNicheIdea = async (
   market: string,
   apiKeys: string[],
   trainingHistory: ChatMessage[],
-  options: AnalysisOptions = {}
+  options: AnalysisOptions = {},
+  onKeyFailure: (index: number) => void
 ): Promise<{ result: AnalysisResult, successfulKeyIndex: number }> => {
     const { existingNichesToAvoid = [], countToGenerate = 10, filters = {} } = options;
     const modelName = 'gemini-2.5-pro';
@@ -213,13 +216,14 @@ export const analyzeNicheIdea = async (
         }
     };
     
-    const { result, successfulKeyIndex } = await executeWithRetry(apiKeys, action);
+    const { result, successfulKeyIndex } = await executeWithRetry(apiKeys, action, onKeyFailure);
     return { result, successfulKeyIndex };
 };
 
 export const getTrainingResponse = async (
     history: ChatMessage[],
     apiKeys: string[],
+    onKeyFailure: (index: number) => void
 ): Promise<{ result: string, successfulKeyIndex: number }> => {
     const modelName = 'gemini-2.5-flash';
 
@@ -246,7 +250,7 @@ export const getTrainingResponse = async (
         return response.text;
     };
 
-    const { result, successfulKeyIndex } = await executeWithRetry(apiKeys, action);
+    const { result, successfulKeyIndex } = await executeWithRetry(apiKeys, action, onKeyFailure);
     return { result, successfulKeyIndex };
 };
 
@@ -318,7 +322,8 @@ export const generateContentPlan = async (
   niche: Niche,
   apiKeys: string[],
   trainingHistory: ChatMessage[],
-  options: ContentPlanOptions = {}
+  options: ContentPlanOptions = {},
+  onKeyFailure: (index: number) => void
 ): Promise<{ result: ContentPlanResult, successfulKeyIndex: number }> => {
     const { existingIdeasToAvoid = [], countToGenerate = 5 } = options;
     const modelName = 'gemini-2.5-pro'; 
@@ -358,7 +363,7 @@ export const generateContentPlan = async (
         }
     };
     
-    const { result, successfulKeyIndex } = await executeWithRetry(apiKeys, action);
+    const { result, successfulKeyIndex } = await executeWithRetry(apiKeys, action, onKeyFailure);
     return { result, successfulKeyIndex };
 };
 
@@ -384,7 +389,8 @@ Your output must be an array of these developed ideas, matching the order of the
 export const developVideoIdeas = async (
   niche: Niche,
   apiKeys: string[],
-  trainingHistory: ChatMessage[]
+  trainingHistory: ChatMessage[],
+  onKeyFailure: (index: number) => void
 ): Promise<{ result: ContentPlanResult, successfulKeyIndex: number }> => {
     const modelName = 'gemini-2.5-pro';
     
@@ -428,7 +434,7 @@ export const developVideoIdeas = async (
         }
     };
     
-    const { result, successfulKeyIndex } = await executeWithRetry(apiKeys, action);
+    const { result, successfulKeyIndex } = await executeWithRetry(apiKeys, action, onKeyFailure);
     return { result, successfulKeyIndex };
 };
 
@@ -483,7 +489,8 @@ export const generateVideoIdeasForNiche = async (
     niche: Niche,
     apiKeys: string[],
     trainingHistory: ChatMessage[],
-    options: { existingIdeasToAvoid?: string[] } = {}
+    options: { existingIdeasToAvoid?: string[] } = {},
+    onKeyFailure: (index: number) => void
 ): Promise<{ result: { video_ideas: VideoIdea[] }, successfulKeyIndex: number }> => {
     const { existingIdeasToAvoid = [] } = options;
     const modelName = 'gemini-2.5-flash';
@@ -522,7 +529,7 @@ export const generateVideoIdeasForNiche = async (
         }
     };
 
-    const { result, successfulKeyIndex } = await executeWithRetry(apiKeys, action);
+    const { result, successfulKeyIndex } = await executeWithRetry(apiKeys, action, onKeyFailure);
     return { result, successfulKeyIndex };
 };
 

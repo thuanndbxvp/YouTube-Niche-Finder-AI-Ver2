@@ -7,15 +7,15 @@ import ResultsDisplay from './components/ResultsDisplay';
 import Loader from './components/Loader';
 import ApiKeyModal from './components/ApiKeyModal';
 import TrainAiModal from './components/TrainAiModal';
-import { BrainIcon } from './components/icons/Icons';
+import { BookmarkIcon } from './components/icons/Icons';
 import InitialSuggestions from './components/InitialSuggestions';
-import ActionBar from './components/ActionBar';
-import { exportNichesToCsv } from './utils/export';
 import PasswordModal from './components/PasswordModal';
 import ContentPlanModal from './components/ContentPlanModal';
 import ErrorModal from './components/ErrorModal';
 import NotificationCenter from './components/NotificationCenter';
+import LibraryModal from './components/LibraryModal';
 import { keyFindingTranscript, nicheKnowledgeBase, parseKnowledgeBaseForSuggestions } from './data/knowledgeBase';
+import { exportNichesToCsv } from './utils/export';
 
 export type ApiKeyStatus = 'idle' | 'checking' | 'valid' | 'invalid';
 
@@ -39,8 +39,9 @@ const FilterDropdown: React.FC<{
     value: FilterLevel;
     onChange: (value: FilterLevel) => void;
     disabled: boolean;
-}> = ({ label, value, onChange, disabled }) => (
-    <div>
+    tooltipText: string;
+}> = ({ label, value, onChange, disabled, tooltipText }) => (
+    <div className="relative group">
         <label className="block text-xs font-medium text-gray-400 mb-1">{label}</label>
         <select
             value={value}
@@ -53,8 +54,13 @@ const FilterDropdown: React.FC<{
             <option value="medium">Trung Bình</option>
             <option value="high">Cao</option>
         </select>
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-gray-900 border border-gray-700 text-gray-300 text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-10">
+            {tooltipText}
+            <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-x-8 border-x-transparent border-t-8 border-t-gray-900"></div>
+        </div>
     </div>
 );
+
 
 // Fisher-Yates shuffle algorithm
 const shuffleArray = (array: string[]) => {
@@ -91,6 +97,7 @@ const App: React.FC = () => {
   const [activeApiKeyIndex, setActiveApiKeyIndex] = useState<number | null>(null);
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState<boolean>(false);
   const [isTrainAiModalOpen, setIsTrainAiModalOpen] = useState<boolean>(false);
+  const [isLibraryModalOpen, setIsLibraryModalOpen] = useState<boolean>(false);
 
   const [trainingChatHistory, setTrainingChatHistory] = useState<ChatMessage[]>([]);
   const [isTrainingLoading, setIsTrainingLoading] = useState<boolean>(false);
@@ -117,40 +124,56 @@ const App: React.FC = () => {
   const checkAndSetApiKeys = async (keysToCheck: string[]) => {
     if (keysToCheck.length === 0) {
         setApiKeyStatuses([]);
+        localStorage.setItem('geminiApiKeyStatuses', JSON.stringify([]));
         return;
     }
     
-    // Set statuses to 'checking' to provide immediate feedback
     setApiKeyStatuses(keysToCheck.map(() => 'checking'));
     
-    // Validate each key in parallel
     const validationPromises = keysToCheck.map(key => validateApiKey(key));
     const results = await Promise.all(validationPromises);
     
     const finalStatuses = results.map(isValid => (isValid ? 'valid' : 'invalid'));
     setApiKeyStatuses(finalStatuses);
+    localStorage.setItem('geminiApiKeyStatuses', JSON.stringify(finalStatuses));
   };
 
 
   useEffect(() => {
-    // Auto-validate API keys on initial load
-    const autoValidateApiKeys = async () => {
-        try {
-            const storedApiKeys = localStorage.getItem('geminiApiKeys');
-            if (storedApiKeys) {
-                const parsedKeys = JSON.parse(storedApiKeys);
-                if (Array.isArray(parsedKeys) && parsedKeys.length > 0) {
-                    setApiKeys(parsedKeys);
-                    await checkAndSetApiKeys(parsedKeys); // Auto-validate stored keys
-                }
+    // Load API keys and their statuses from localStorage on initial load
+    const loadApiConfig = () => {
+      try {
+        const storedApiKeys = localStorage.getItem('geminiApiKeys');
+        const storedStatuses = localStorage.getItem('geminiApiKeyStatuses');
+
+        if (storedApiKeys) {
+          const parsedKeys = JSON.parse(storedApiKeys);
+          if (Array.isArray(parsedKeys)) {
+            setApiKeys(parsedKeys);
+
+            let statuses: ApiKeyStatus[] = [];
+            if (storedStatuses) {
+              const parsedStatuses = JSON.parse(storedStatuses);
+              if (Array.isArray(parsedStatuses) && parsedStatuses.length === parsedKeys.length) {
+                statuses = parsedStatuses;
+              }
             }
-        } catch (e) {
-            console.error("Could not parse API keys from localStorage", e);
-            localStorage.removeItem('geminiApiKeys');
+            
+            if (statuses.length !== parsedKeys.length) {
+              statuses = parsedKeys.map(() => 'idle');
+              localStorage.setItem('geminiApiKeyStatuses', JSON.stringify(statuses));
+            }
+            setApiKeyStatuses(statuses);
+          }
         }
+      } catch (e) {
+        console.error("Could not parse API config from localStorage", e);
+        localStorage.removeItem('geminiApiKeys');
+        localStorage.removeItem('geminiApiKeyStatuses');
+      }
     };
     
-    autoValidateApiKeys();
+    loadApiConfig();
 
     // Load saved niches
     try {
@@ -215,7 +238,6 @@ const App: React.FC = () => {
   const markets = ['Quốc tế', 'US/Canada', 'Anh', 'Úc', 'Đức', 'Pháp', 'Việt Nam', 'Nhật', 'Hàn', 'Custom'];
 
   const handleSaveAndCheckApiKeys = async (newApiKeys: string[]) => {
-    // Save keys first to update the UI list
     setApiKeys(newApiKeys);
     localStorage.setItem('geminiApiKeys', JSON.stringify(newApiKeys));
     await checkAndSetApiKeys(newApiKeys);
@@ -228,6 +250,8 @@ const App: React.FC = () => {
     setApiKeys(newKeys);
     setApiKeyStatuses(newStatuses);
     localStorage.setItem('geminiApiKeys', JSON.stringify(newKeys));
+    localStorage.setItem('geminiApiKeyStatuses', JSON.stringify(newStatuses));
+
 
     // Adjust active key index if necessary
     if (activeApiKeyIndex === indexToDelete) {
@@ -289,6 +313,17 @@ const App: React.FC = () => {
     });
   };
 
+  const onKeyFailure = (index: number) => {
+    setApiKeyStatuses(prev => {
+        const newStatuses = [...prev];
+        if (newStatuses[index] !== 'invalid') {
+            newStatuses[index] = 'invalid';
+            localStorage.setItem('geminiApiKeyStatuses', JSON.stringify(newStatuses));
+        }
+        return newStatuses;
+    });
+  };
+
   const runAnalysis = async (idea: string, isNewSearch: boolean, isLoadMore: boolean = false) => {
     const hasValidKey = apiKeyStatuses.includes('valid');
     if (apiKeys.length === 0 || !hasValidKey) {
@@ -331,7 +366,7 @@ const App: React.FC = () => {
             sustainability: sustainabilityLevel
         }
       };
-      const { result, successfulKeyIndex } = await analyzeNicheIdea(idea, marketToAnalyze, apiKeys, trainingChatHistory, options);
+      const { result, successfulKeyIndex } = await analyzeNicheIdea(idea, marketToAnalyze, apiKeys, trainingChatHistory, options, onKeyFailure);
 
       setActiveApiKeyIndex(successfulKeyIndex);
 
@@ -380,7 +415,7 @@ const App: React.FC = () => {
 
     try {
         const existingTitles = nicheToUpdate.video_ideas?.map(idea => idea.title.original) || [];
-        const { result, successfulKeyIndex } = await generateVideoIdeasForNiche(nicheToUpdate, apiKeys, trainingChatHistory, { existingIdeasToAvoid: existingTitles });
+        const { result, successfulKeyIndex } = await generateVideoIdeasForNiche(nicheToUpdate, apiKeys, trainingChatHistory, { existingIdeasToAvoid: existingTitles }, onKeyFailure);
         setActiveApiKeyIndex(successfulKeyIndex);
 
         setAnalysisResult(prevResult => {
@@ -427,7 +462,7 @@ const App: React.FC = () => {
     setError(null);
 
     try {
-        const { result, successfulKeyIndex } = await developVideoIdeas(niche, apiKeys, trainingChatHistory);
+        const { result, successfulKeyIndex } = await developVideoIdeas(niche, apiKeys, trainingChatHistory, onKeyFailure);
         setActiveApiKeyIndex(successfulKeyIndex);
         
         setContentPlanCache(prevCache => ({
@@ -490,7 +525,8 @@ const App: React.FC = () => {
         activeNicheForContentPlan,
         apiKeys,
         trainingChatHistory,
-        options
+        options,
+        onKeyFailure
       );
 
       setActiveApiKeyIndex(successfulKeyIndex);
@@ -565,6 +601,14 @@ const App: React.FC = () => {
     }
   };
 
+  const handleDeleteSavedNiche = (nicheNameToDelete: string) => {
+    setSavedNiches(prev => {
+        const newSavedNiches = prev.filter(saved => saved.niche_name.original !== nicheNameToDelete);
+        localStorage.setItem('savedNiches', JSON.stringify(newSavedNiches));
+        return newSavedNiches;
+    });
+  };
+
   const handleSendTrainingMessage = async (message: string, files: File[]) => {
     const hasValidKey = apiKeyStatuses.includes('valid');
     if (apiKeys.length === 0 || !hasValidKey) {
@@ -596,7 +640,7 @@ const App: React.FC = () => {
     setIsTrainingLoading(true);
 
     try {
-        const { result: responseText, successfulKeyIndex } = await getTrainingResponse(newHistory, apiKeys);
+        const { result: responseText, successfulKeyIndex } = await getTrainingResponse(newHistory, apiKeys, onKeyFailure);
         setActiveApiKeyIndex(successfulKeyIndex);
         const modelMessage: ChatMessage = { role: 'model', parts: [{ text: responseText }] };
         updateTrainingHistory([...newHistory, modelMessage]);
@@ -638,6 +682,19 @@ const App: React.FC = () => {
       <NotificationCenter notifications={notifications} onRemove={removeNotification} />
       <header className="absolute top-0 right-0 p-4 z-10">
         <div className="flex items-center space-x-2">
+            <button
+                onClick={() => setIsLibraryModalOpen(true)}
+                className="relative flex items-center space-x-2 px-4 py-2 bg-gray-800/80 border border-gray-700 rounded-md text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                aria-label="Thư viện"
+            >
+                <BookmarkIcon />
+                <span>Thư viện</span>
+                {savedNiches.length > 0 && (
+                    <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-youtube-red text-xs font-bold text-white">
+                        {savedNiches.length}
+                    </span>
+                )}
+            </button>
             <button
                 onClick={() => setIsApiKeyModalOpen(true)}
                 className={`px-4 py-2 rounded-md text-sm font-semibold text-white transition-colors duration-300 border ${
@@ -720,10 +777,34 @@ const App: React.FC = () => {
                 )}
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
-                    <FilterDropdown label="Mức độ quan tâm" value={interestLevel} onChange={setInterestLevel} disabled={isLoading} />
-                    <FilterDropdown label="Tiềm năng kiếm tiền" value={monetizationLevel} onChange={setMonetizationLevel} disabled={isLoading} />
-                    <FilterDropdown label="Mức độ cạnh tranh" value={competitionLevel} onChange={setCompetitionLevel} disabled={isLoading} />
-                    <FilterDropdown label="Tính bền vững" value={sustainabilityLevel} onChange={setSustainabilityLevel} disabled={isLoading} />
+                    <FilterDropdown 
+                        label="Mức độ quan tâm" 
+                        value={interestLevel} 
+                        onChange={setInterestLevel} 
+                        disabled={isLoading}
+                        tooltipText="Lọc các ngách dựa trên mức độ quan tâm và khối lượng tìm kiếm của khán giả. 'Cao' có nghĩa là rất phổ biến."
+                    />
+                    <FilterDropdown 
+                        label="Tiềm năng kiếm tiền" 
+                        value={monetizationLevel} 
+                        onChange={setMonetizationLevel} 
+                        disabled={isLoading}
+                        tooltipText="Lọc các ngách dựa trên khả năng kiếm tiền (quảng cáo, affiliate, v.v.). 'Cao' có nghĩa là RPM ước tính cao hơn."
+                    />
+                    <FilterDropdown 
+                        label="Mức độ cạnh tranh" 
+                        value={competitionLevel} 
+                        onChange={setCompetitionLevel} 
+                        disabled={isLoading}
+                        tooltipText="Lọc các ngách dựa trên mức độ cạnh tranh. 'Thấp' có nghĩa là ít cạnh tranh hơn, dễ dàng hơn để nổi bật."
+                    />
+                    <FilterDropdown 
+                        label="Tính bền vững" 
+                        value={sustainabilityLevel} 
+                        onChange={setSustainabilityLevel} 
+                        disabled={isLoading}
+                        tooltipText="Lọc các ngách dựa trên tiềm năng lâu dài và khả năng tạo nội dung bền vững. 'Cao' có nghĩa là ngách có tính evergreen."
+                    />
                 </div>
             </div>
              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -750,25 +831,22 @@ const App: React.FC = () => {
             {isLoading && <Loader />}
             
             {analysisResult && !isLoading ? (
-                <>
-                    <ActionBar savedCount={savedNiches.length} onExport={handleExportSaved} onClearSaved={handleClearSavedNiches} />
-                    <ResultsDisplay 
-                      result={analysisResult} 
-                      onDevelop={handleDevelopIdea}
-                      analysisDepth={analysisDepth}
-                      onLoadMore={handleLoadMore}
-                      isLoadingMore={isLoadingMore}
-                      onToggleSave={handleToggleSaveNiche}
-                      savedNiches={savedNiches}
-                      onUseNiche={handleUseNiche}
-                      onViewPlan={handleViewPlan}
-                      generatingNiches={generatingNiches}
-                      contentPlanCache={contentPlanCache}
-                      numResults={numResults}
-                      onGenerateVideoIdeas={handleGenerateVideoIdeas}
-                      generatingVideoIdeas={generatingVideoIdeas}
-                    />
-                </>
+                <ResultsDisplay 
+                  result={analysisResult} 
+                  onDevelop={handleDevelopIdea}
+                  analysisDepth={analysisDepth}
+                  onLoadMore={handleLoadMore}
+                  isLoadingMore={isLoadingMore}
+                  onToggleSave={handleToggleSaveNiche}
+                  savedNiches={savedNiches}
+                  onUseNiche={handleUseNiche}
+                  onViewPlan={handleViewPlan}
+                  generatingNiches={generatingNiches}
+                  contentPlanCache={contentPlanCache}
+                  numResults={numResults}
+                  onGenerateVideoIdeas={handleGenerateVideoIdeas}
+                  generatingVideoIdeas={generatingVideoIdeas}
+                />
             ) : (
                 !isLoading && !error && (
                     <InitialSuggestions setUserInput={setUserInput} />
@@ -782,6 +860,7 @@ const App: React.FC = () => {
         isOpen={isApiKeyModalOpen}
         onClose={() => setIsApiKeyModalOpen(false)}
         onSaveAndCheck={handleSaveAndCheckApiKeys}
+        onRecheck={checkAndSetApiKeys}
         onDeleteKey={handleDeleteApiKey}
         currentApiKeys={apiKeys}
         activeApiKeyIndex={activeApiKeyIndex}
@@ -809,6 +888,14 @@ const App: React.FC = () => {
         activeNiche={activeNicheForContentPlan}
         onLoadMore={handleLoadMoreContentPlan}
         isLoadingMore={isContentPlanLoadingMore}
+      />
+      <LibraryModal
+        isOpen={isLibraryModalOpen}
+        onClose={() => setIsLibraryModalOpen(false)}
+        savedNiches={savedNiches}
+        onDeleteNiche={handleDeleteSavedNiche}
+        onDeleteAll={handleClearSavedNiches}
+        onExport={handleExportSaved}
       />
       <ErrorModal
         isOpen={!!error}

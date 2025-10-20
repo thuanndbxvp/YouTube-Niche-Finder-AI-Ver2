@@ -1,3 +1,4 @@
+
 import React from 'react';
 import type { AnalysisResult, Niche, ContentPlanResult } from '../types';
 import NicheCard from './NicheCard';
@@ -25,7 +26,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onDevelop, anal
   const numToAdd = parseInt(numResults, 10);
 
   return (
-    <div className="w-full flex flex-col gap-8">
+    <div className="w-full flex flex-col gap-8 mt-6">
       {result.niches.map((niche, index) => {
         const isSaved = savedNiches.some(saved => saved.niche_name.original === niche.niche_name.original);
         const hasContentPlan = !!contentPlanCache[niche.niche_name.original];

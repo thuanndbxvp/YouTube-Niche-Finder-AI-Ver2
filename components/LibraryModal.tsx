@@ -1,7 +1,12 @@
-
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import type { Niche } from '../types';
-import { BookmarkIcon, XIcon, DownloadIcon, TrashIcon } from './icons/Icons';
+import { BookmarkIcon, XIcon, DownloadIcon, TrashIcon, GoogleIcon, CheckCircleIcon } from './icons/Icons';
+import { generateNichesCsvContent } from '../utils/export';
+
+// --- Google API Configuration ---
+// IMPORTANT: Replace with your actual Google Cloud Client ID
+const CLIENT_ID = 'YOUR_CLIENT_ID.apps.googleusercontent.com';
+const SCOPES = 'https://www.googleapis.com/auth/drive.file';
 
 interface LibraryModalProps {
   isOpen: boolean;
@@ -13,19 +18,117 @@ interface LibraryModalProps {
 }
 
 const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, savedNiches, onDeleteNiche, onDeleteAll, onExport }) => {
-  if (!isOpen) return null;
+  const [gapiReady, setGapiReady] = useState(false);
+  const [gisReady, setGisReady] = useState(false);
+  const [tokenClient, setTokenClient] = useState<any>(null);
+  const [isSignedIn, setIsSignedIn] = useState(false);
+  const [isUploadingToDrive, setIsUploadingToDrive] = useState(false);
+  const [uploadMessage, setUploadMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
-  const handleExportClick = () => {
-    if (savedNiches.length > 0) {
-      onExport();
+  useEffect(() => {
+    const scriptGapi = document.createElement('script');
+    scriptGapi.src = 'https://apis.google.com/js/api.js';
+    scriptGapi.async = true;
+    scriptGapi.defer = true;
+    // FIX: Cast window to any to access gapi property injected by the Google API script.
+    scriptGapi.onload = () => (window as any).gapi.load('client', () => setGapiReady(true));
+    document.body.appendChild(scriptGapi);
+
+    const scriptGis = document.createElement('script');
+    scriptGis.src = 'https://accounts.google.com/gsi/client';
+    scriptGis.async = true;
+    scriptGis.defer = true;
+    scriptGis.onload = () => setGisReady(true);
+    document.body.appendChild(scriptGis);
+
+    return () => {
+      document.body.removeChild(scriptGapi);
+      document.body.removeChild(scriptGis);
+    };
+  }, []);
+  
+  const initGoogleClient = useCallback(() => {
+    if (gapiReady && gisReady && (window as any).google && (window as any).gapi) {
+        const client = (window as any).google.accounts.oauth2.initTokenClient({
+            client_id: CLIENT_ID,
+            scope: SCOPES,
+            callback: (tokenResponse: any) => {
+                if (tokenResponse && tokenResponse.access_token) {
+                    (window as any).gapi.client.setToken(tokenResponse);
+                    setIsSignedIn(true);
+                }
+            },
+        });
+        setTokenClient(client);
+    }
+  }, [gapiReady, gisReady]);
+
+  useEffect(() => {
+    initGoogleClient();
+  }, [initGoogleClient]);
+  
+
+  const handleAuthClick = () => {
+    if (tokenClient) {
+        tokenClient.requestAccessToken({ prompt: 'consent' });
     }
   };
   
-  const handleDeleteAllClick = () => {
-    if (savedNiches.length > 0) {
-        onDeleteAll();
+  const handleSignoutClick = () => {
+    const token = (window as any).gapi.client.getToken();
+    if (token !== null) {
+        (window as any).google.accounts.oauth2.revoke(token.access_token, () => {
+            (window as any).gapi.client.setToken(null);
+            setIsSignedIn(false);
+            setUploadMessage(null);
+        });
     }
   };
+  
+  const handleUploadToDrive = async () => {
+    if (savedNiches.length === 0) return;
+    setIsUploadingToDrive(true);
+    setUploadMessage(null);
+
+    const csvContent = generateNichesCsvContent(savedNiches);
+    const fileName = `youtube_niche_library_${new Date().toISOString().split('T')[0]}.csv`;
+    const metadata = {
+        name: fileName,
+        mimeType: 'text/csv',
+    };
+
+    const boundary = '-------314159265358979323846';
+    const delimiter = `\r\n--${boundary}\r\n`;
+    const close_delim = `\r\n--${boundary}--`;
+
+    const multipartRequestBody =
+        delimiter +
+        'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+        JSON.stringify(metadata) +
+        delimiter +
+        'Content-Type: text/csv\r\n\r\n' +
+        csvContent +
+        close_delim;
+    
+    try {
+        await (window as any).gapi.client.request({
+            path: '/upload/drive/v3/files',
+            method: 'POST',
+            params: { uploadType: 'multipart' },
+            headers: {
+                'Content-Type': `multipart/related; boundary="${boundary}"`,
+            },
+            body: multipartRequestBody,
+        });
+        setUploadMessage({ type: 'success', text: `Tệp "${fileName}" đã được lưu thành công vào Google Drive của bạn.` });
+    } catch (error: any) {
+        console.error('Error uploading to Drive:', error);
+        setUploadMessage({ type: 'error', text: `Lỗi khi tải lên: ${error.result?.error?.message || 'Vui lòng thử lại.'}` });
+    } finally {
+        setIsUploadingToDrive(false);
+    }
+  };
+
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4" onClick={onClose}>
@@ -74,31 +177,78 @@ const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, savedNiche
             </div>
           )}
         </div>
-
-        <footer className="p-4 border-t border-gray-700 flex justify-end items-center gap-4">
-            <button
-                onClick={handleDeleteAllClick}
-                disabled={savedNiches.length === 0}
-                className="flex items-center justify-center gap-2 px-4 py-2 bg-red-600/80 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
-            >
-                <TrashIcon />
-                <span>Xóa tất cả</span>
-            </button>
-            <button
-                onClick={handleExportClick}
-                disabled={savedNiches.length === 0}
-                className="flex items-center justify-center gap-2 px-4 py-2 bg-teal-600 text-white font-semibold rounded-lg shadow-md hover:bg-teal-700 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
-            >
-                <DownloadIcon />
-                <span>Xuất File Excel</span>
-            </button>
-            <button
-                onClick={onClose}
-                className="px-4 py-2 bg-gray-700 rounded-md text-sm text-gray-300 hover:bg-gray-600 transition-colors"
-            >
-                Đóng
-            </button>
-        </footer>
+        
+        <div className="p-4 border-t border-gray-700 space-y-4">
+            {/* Google Drive Section */}
+            <div className="p-4 bg-gray-900/50 rounded-lg border border-gray-700/50">
+                <h3 className="font-semibold text-gray-200 mb-3">Đồng bộ với Google Drive</h3>
+                {!isSignedIn ? (
+                    <button
+                        onClick={handleAuthClick}
+                        disabled={!gapiReady || !gisReady}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-white text-gray-800 font-semibold rounded-lg shadow-md hover:bg-gray-200 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <GoogleIcon />
+                        <span>Đăng nhập với Google</span>
+                    </button>
+                ) : (
+                    <div className="space-y-3">
+                         <button
+                            onClick={handleUploadToDrive}
+                            disabled={isUploadingToDrive || savedNiches.length === 0}
+                            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                           {isUploadingToDrive ? (
+                                <>
+                                    <div className="w-5 h-5 border-2 border-t-white border-blue-800 rounded-full animate-spin"></div>
+                                    <span>Đang tải lên...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <GoogleIcon />
+                                    <span>Lưu vào Google Drive</span>
+                                </>
+                            )}
+                        </button>
+                         <button onClick={handleSignoutClick} className="w-full text-xs text-gray-400 hover:underline">
+                            Đăng xuất
+                        </button>
+                    </div>
+                )}
+                {uploadMessage && (
+                    <div className={`mt-3 p-2 rounded-md text-sm flex items-start gap-2 ${uploadMessage.type === 'success' ? 'bg-green-900/50 text-green-300' : 'bg-red-900/50 text-red-300'}`}>
+                        <div className="mt-0.5"><CheckCircleIcon /></div>
+                        <span>{uploadMessage.text}</span>
+                    </div>
+                )}
+            </div>
+            
+            {/* Local Actions */}
+             <div className="flex justify-end items-center gap-4">
+                <button
+                    onClick={() => savedNiches.length > 0 && onDeleteAll()}
+                    disabled={savedNiches.length === 0}
+                    className="flex items-center justify-center gap-2 px-4 py-2 bg-red-600/80 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
+                >
+                    <TrashIcon />
+                    <span>Xóa tất cả</span>
+                </button>
+                <button
+                    onClick={() => savedNiches.length > 0 && onExport()}
+                    disabled={savedNiches.length === 0}
+                    className="flex items-center justify-center gap-2 px-4 py-2 bg-teal-600 text-white font-semibold rounded-lg shadow-md hover:bg-teal-700 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
+                >
+                    <DownloadIcon />
+                    <span>Tải về máy (.csv)</span>
+                </button>
+                <button
+                    onClick={onClose}
+                    className="px-4 py-2 bg-gray-700 rounded-md text-sm text-gray-300 hover:bg-gray-600 transition-colors"
+                >
+                    Đóng
+                </button>
+            </div>
+        </div>
       </div>
     </div>
   );

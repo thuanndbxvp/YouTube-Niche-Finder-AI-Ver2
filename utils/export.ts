@@ -9,10 +9,9 @@ function escapeCsvCell(cellData: string | number): string {
     return stringData;
 }
 
-export function exportNichesToCsv(niches: Niche[], filename: string = 'youtube_niche_ideas.csv') {
+export function generateNichesCsvContent(niches: Niche[]): string {
     if (!niches || niches.length === 0) {
-        alert("Không có dữ liệu để xuất.");
-        return;
+        return '';
     }
 
     const maxIdeas = Math.max(...niches.map(n => (n.video_ideas || []).length), 0);
@@ -72,7 +71,17 @@ export function exportNichesToCsv(niches: Niche[], filename: string = 'youtube_n
         return row.join(',');
     });
 
-    const csvContent = [headers.join(','), ...rows].join('\n');
+    return [headers.join(','), ...rows].join('\n');
+}
+
+
+export function exportNichesToCsv(niches: Niche[], filename: string = 'youtube_niche_ideas.csv') {
+    const csvContent = generateNichesCsvContent(niches);
+    if (!csvContent) {
+        alert("Không có dữ liệu để xuất.");
+        return;
+    }
+
     const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
 
     const link = document.createElement('a');

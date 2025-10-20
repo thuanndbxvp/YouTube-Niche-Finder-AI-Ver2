@@ -139,7 +139,7 @@ const NicheCard: React.FC<NicheCardProps> = ({ niche, index, onDevelop, analysis
                             </div>
                         ) : (
                              <div className="flex justify-center items-center p-4 bg-gray-900/50 rounded-lg border border-dashed border-gray-700/50">
-                                <p className="text-gray-500 italic">Hãy bấm nút Ý tưởng video để tạo nội dung gợi ý.</p>
+                                <p className="text-gray-500 italic">Hãy bấm nút Tạo ý tưởng video để tạo nội dung gợi ý.</p>
                             </div>
                         )}
                     </div>

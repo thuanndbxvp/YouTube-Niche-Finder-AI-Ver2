@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { analyzeNicheIdea, getTrainingResponse, generateContentPlan, validateApiKey, developVideoIdeas, generateVideoIdeasForNiche } from './services/geminiService';
-import type { AnalysisResult, ChatMessage, Part, Niche, FilterLevel, ContentPlanResult, Notification as NotificationType } from './types';
+import type { AnalysisResult, ChatMessage, Part, Niche, FilterLevel, ContentPlanResult, Notification as NotificationType, VideoIdea } from './types';
 import SearchBar from './components/SearchBar';
 import ResultsDisplay from './components/ResultsDisplay';
 import Loader from './components/Loader';
@@ -489,7 +489,6 @@ const App: React.FC = () => {
       const { result: newContent, successfulKeyIndex } = await generateContentPlan(
         activeNicheForContentPlan,
         apiKeys,
-// FIX: Cannot find name 'trainingHistory'. Did you mean 'trainingChatHistory'?
         trainingChatHistory,
         options
       );
@@ -505,6 +504,31 @@ const App: React.FC = () => {
         ...prevCache,
         [activeNicheForContentPlan.niche_name.original]: updatedContentPlan
       }));
+
+      // Update the main analysisResult state to reflect the new video ideas
+      setAnalysisResult(prevResult => {
+          if (!prevResult || !activeNicheForContentPlan) return prevResult;
+          
+          const newNiches = prevResult.niches.map(niche => {
+              if (niche.niche_name.original === activeNicheForContentPlan.niche_name.original) {
+                  // Convert detailed content ideas to simple video ideas
+                  const newVideoIdeasFromPlan: VideoIdea[] = newContent.content_ideas.map(detailedIdea => ({
+                      title: detailedIdea.title,
+                      // The hook is a good summary for the draft content.
+                      draft_content: detailedIdea.hook, 
+                  }));
+
+                  const existingVideoIdeas = niche.video_ideas || [];
+                  return {
+                      ...niche,
+                      video_ideas: [...existingVideoIdeas, ...newVideoIdeasFromPlan],
+                  };
+              }
+              return niche;
+          });
+
+          return { ...prevResult, niches: newNiches };
+      });
 
     } catch (err: any) {
       console.error(err);
@@ -589,12 +613,16 @@ const App: React.FC = () => {
   const Logo: React.FC = () => (
     <a href="/" className="flex items-center space-x-3">
       <svg
-        className="h-10 w-10 text-red-500"
+        className="h-10 w-10 text-youtube-red"
         fill="currentColor"
         viewBox="0 0 24 24"
         xmlns="http://www.w3.org/2000/svg"
       >
-        <path d="M10,15L15.19,12L10,9V15M21.56,7.17C21.69,7.64 21.78,8.27 21.84,9.07C21.91,9.87 21.94,10.56 21.94,11.16L22,12C22,14.19 21.84,15.8 21.56,16.83C21.31,17.73 20.73,18.31 19.83,18.56C19.36,18.69 18.73,18.78 17.93,18.84C17.13,18.91 16.44,18.94 15.84,18.94L12,19C9.81,19 8.2,18.84 7.17,18.56C6.27,18.31 5.69,17.73 5.44,16.83C5.31,16.36 5.22,15.73 5.16,14.93C5.09,14.13 5.06,13.44 5.06,12.84L5,12C5,9.81 5.16,8.2 5.44,7.17C5.69,6.27 6.27,5.69 7.17,5.44C7.64,5.31 8.27,5.22 9.07,5.16C9.87,5.09 10.56,5.06 11.16,5.06L12,5C14.19,5 15.8,5.16 16.83,5.44C17.73,5.69 18.31,6.27 18.56,7.17Z" />
+        <path
+          fillRule="evenodd"
+          clipRule="evenodd"
+          d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"
+        />
       </svg>
       <h1 className="text-3xl font-bold tracking-tight">
         YouTube Niche Finder{' '}

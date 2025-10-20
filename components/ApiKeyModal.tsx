@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import type { ApiKeyStatus } from '../App';
-import { CheckCircleIcon, XCircleIcon } from './icons/Icons';
+import { CheckCircleIcon, XCircleIcon, TrashIcon } from './icons/Icons';
 
 interface ApiKeyModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSaveAndCheck: (apiKeys: string[]) => Promise<void>;
+  onDeleteKey: (index: number) => void;
   currentApiKeys: string[];
   activeApiKeyIndex: number | null;
   apiKeyStatuses: ApiKeyStatus[];
@@ -25,7 +26,7 @@ const StatusIcon: React.FC<{ status: ApiKeyStatus }> = ({ status }) => {
 };
 
 
-const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose, onSaveAndCheck, currentApiKeys, activeApiKeyIndex, apiKeyStatuses }) => {
+const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose, onSaveAndCheck, onDeleteKey, currentApiKeys, activeApiKeyIndex, apiKeyStatuses }) => {
   const [keysInput, setKeysInput] = useState('');
   const [isChecking, setIsChecking] = useState(false);
 
@@ -59,17 +60,26 @@ const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, onClose, onSaveAndChe
                     <ul className="space-y-2">
                         {currentApiKeys.map((key, index) => (
                             <li key={index} className={`flex items-center justify-between p-2 rounded-md transition-colors ${index === activeApiKeyIndex ? 'bg-teal-900/70' : 'bg-gray-700'}`}>
-                                <div className="flex items-center space-x-3">
+                                <div className="flex items-center space-x-3 overflow-hidden">
                                     <StatusIcon status={apiKeyStatuses[index] || 'idle'} />
                                     <span className="font-mono text-sm text-gray-300 truncate">
                                         {`Key ${index + 1}: ************${key.slice(-4)}`}
                                     </span>
                                 </div>
-                                {index === activeApiKeyIndex && (
-                                    <span className="text-xs text-teal-300 font-bold bg-teal-800/80 px-2 py-1 rounded-full">
-                                        ĐANG HOẠT ĐỘNG
-                                    </span>
-                                )}
+                                <div className="flex items-center space-x-2 flex-shrink-0">
+                                    {index === activeApiKeyIndex && (
+                                        <span className="text-xs text-teal-300 font-bold bg-teal-800/80 px-2 py-1 rounded-full">
+                                            ĐANG HOẠT ĐỘNG
+                                        </span>
+                                    )}
+                                    <button
+                                        onClick={() => onDeleteKey(index)}
+                                        className="p-1.5 text-gray-400 hover:bg-red-500/20 hover:text-red-400 rounded-full transition-colors"
+                                        aria-label={`Xóa Key ${index + 1}`}
+                                    >
+                                        <TrashIcon />
+                                    </button>
+                                </div>
                             </li>
                         ))}
                     </ul>

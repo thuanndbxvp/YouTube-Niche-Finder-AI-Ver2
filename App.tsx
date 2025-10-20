@@ -92,20 +92,44 @@ const App: React.FC = () => {
   const [activeNicheForContentPlan, setActiveNicheForContentPlan] = useState<Niche | null>(null);
   const [isContentPlanLoadingMore, setIsContentPlanLoadingMore] = useState<boolean>(false);
 
+  // Helper function to validate keys and set statuses
+  const checkAndSetApiKeys = async (keysToCheck: string[]) => {
+    if (keysToCheck.length === 0) {
+        setApiKeyStatuses([]);
+        return;
+    }
+    
+    // Set statuses to 'checking' to provide immediate feedback
+    setApiKeyStatuses(keysToCheck.map(() => 'checking'));
+    
+    // Validate each key in parallel
+    const validationPromises = keysToCheck.map(key => validateApiKey(key));
+    const results = await Promise.all(validationPromises);
+    
+    const finalStatuses = results.map(isValid => (isValid ? 'valid' : 'invalid'));
+    setApiKeyStatuses(finalStatuses);
+  };
+
 
   useEffect(() => {
-    // API Keys
-    try {
-      const storedApiKeys = localStorage.getItem('geminiApiKeys');
-      if (storedApiKeys) {
-        const parsedKeys = JSON.parse(storedApiKeys);
-        setApiKeys(parsedKeys);
-        setApiKeyStatuses(parsedKeys.map(() => 'idle' as ApiKeyStatus));
-      }
-    } catch (e) {
-      console.error("Could not parse API keys from localStorage", e);
-      localStorage.removeItem('geminiApiKeys');
-    }
+    // Auto-validate API keys on initial load
+    const autoValidateApiKeys = async () => {
+        try {
+            const storedApiKeys = localStorage.getItem('geminiApiKeys');
+            if (storedApiKeys) {
+                const parsedKeys = JSON.parse(storedApiKeys);
+                if (Array.isArray(parsedKeys) && parsedKeys.length > 0) {
+                    setApiKeys(parsedKeys);
+                    await checkAndSetApiKeys(parsedKeys); // Auto-validate stored keys
+                }
+            }
+        } catch (e) {
+            console.error("Could not parse API keys from localStorage", e);
+            localStorage.removeItem('geminiApiKeys');
+        }
+    };
+    
+    autoValidateApiKeys();
     
     // Training Password
     const storedPassword = localStorage.getItem('trainingPassword');
@@ -172,17 +196,23 @@ rồi chúng ta có thể dùng cái tex này sửa đổi lại nội dung cho 
     // Save keys first to update the UI list
     setApiKeys(newApiKeys);
     localStorage.setItem('geminiApiKeys', JSON.stringify(newApiKeys));
+    await checkAndSetApiKeys(newApiKeys);
+  };
+  
+  const handleDeleteApiKey = (indexToDelete: number) => {
+    const newKeys = apiKeys.filter((_, i) => i !== indexToDelete);
+    const newStatuses = apiKeyStatuses.filter((_, i) => i !== indexToDelete);
+    
+    setApiKeys(newKeys);
+    setApiKeyStatuses(newStatuses);
+    localStorage.setItem('geminiApiKeys', JSON.stringify(newKeys));
 
-    // Set all statuses to 'checking'
-    const initialStatuses: ApiKeyStatus[] = newApiKeys.map(() => 'checking');
-    setApiKeyStatuses(initialStatuses);
-    
-    // Validate each key
-    const validationPromises = newApiKeys.map(key => validateApiKey(key));
-    const results = await Promise.all(validationPromises);
-    
-    const finalStatuses = results.map(isValid => (isValid ? 'valid' : 'invalid'));
-    setApiKeyStatuses(finalStatuses);
+    // Adjust active key index if necessary
+    if (activeApiKeyIndex === indexToDelete) {
+        setActiveApiKeyIndex(null);
+    } else if (activeApiKeyIndex !== null && indexToDelete < activeApiKeyIndex) {
+        setActiveApiKeyIndex(prev => (prev !== null ? prev - 1 : null));
+    }
   };
 
 
@@ -583,6 +613,7 @@ rồi chúng ta có thể dùng cái tex này sửa đổi lại nội dung cho 
         isOpen={isApiKeyModalOpen}
         onClose={() => setIsApiKeyModalOpen(false)}
         onSaveAndCheck={handleSaveAndCheckApiKeys}
+        onDeleteKey={handleDeleteApiKey}
         currentApiKeys={apiKeys}
         activeApiKeyIndex={activeApiKeyIndex}
         apiKeyStatuses={apiKeyStatuses}

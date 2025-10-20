@@ -456,17 +456,18 @@ const videoIdeasResponseSchema = {
     required: ["video_ideas"]
 };
 
-const videoIdeasSystemInstruction = (nicheName: string, nicheDescription: string) => {
-    return `You are an expert YouTube Content Strategist. Your task is to generate 5-10 creative and engaging video ideas for the given niche.
-IMPORTANT: All explanatory text (draft_content) MUST be in VIETNAMESE.
+const videoIdeasSystemInstruction = (nicheName: string) => {
+    return `You are an expert YouTube Content Strategist. Your task is to generate 5-10 creative and engaging video ideas for the provided niche.
+The niche is defined by its name, which is in the target market's language (likely English).
+Base your video ideas solely on this original niche name.
 
-- Niche context:
+IMPORTANT: For your output, follow these rules:
+1.  The "draft_content" for each idea MUST be in VIETNAMESE.
+2.  The "title.original" MUST be a viral, catchy title in the same language as the provided niche name.
+3.  The "title.translated" MUST be the Vietnamese translation of the original title.
+
+- Niche context to focus on:
   - Name: ${nicheName}
-  - Description: ${nicheDescription}
-
-- For each idea, you MUST provide:
-  - "title": An object with "original" (a viral, catchy title in the target market's native language) and "translated" (the Vietnamese translation).
-  - "draft_content": A short, 1-2 sentence summary in VIETNAMESE outlining the potential content of the video.
   
 Generate exactly 10 distinct and creative video ideas.`;
 };
@@ -477,7 +478,8 @@ export const generateVideoIdeasForNiche = async (
     trainingHistory: ChatMessage[]
 ): Promise<{ result: { video_ideas: VideoIdea[] }, successfulKeyIndex: number }> => {
     const modelName = 'gemini-2.5-flash';
-    const userPrompt = `Dựa trên ngách sau đây, hãy tạo 10 ý tưởng video.\n\nTên ngách: ${niche.niche_name.original}\nMô tả: ${niche.description}`;
+    // This prompt is now direct and in English to match the context of the niche name.
+    const userPrompt = `Please generate 10 video ideas for the YouTube niche: "${niche.niche_name.original}".`;
     
     const contents: Content[] = [
         ...trainingHistory.map(msg => ({
@@ -497,7 +499,7 @@ export const generateVideoIdeasForNiche = async (
             model: modelName,
             contents: contents,
             config: {
-                systemInstruction: videoIdeasSystemInstruction(niche.niche_name.original, niche.description),
+                systemInstruction: videoIdeasSystemInstruction(niche.niche_name.original),
                 responseMimeType: "application/json",
                 responseSchema: videoIdeasResponseSchema
             }

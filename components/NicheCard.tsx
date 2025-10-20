@@ -112,21 +112,23 @@ const NicheCard: React.FC<NicheCardProps> = ({ niche, index, onDevelop, analysis
                         
                         {hasVideoIdeas ? (
                             <div className="overflow-x-auto bg-gray-900/50 rounded-lg border border-gray-700/50">
-                                <table className="w-full text-sm">
+                                <table className="w-full text-sm table-fixed">
                                     <thead className="bg-gray-700/30">
                                         <tr>
-                                            <th className="text-left font-semibold text-gray-300 p-3 w-1/3">Tiêu đề</th>
-                                            <th className="text-left font-semibold text-gray-300 p-3 w-2/3">Nội dung phác họa</th>
+                                            <th className="text-center font-semibold text-gray-300 p-3 w-16">STT</th>
+                                            <th className="text-left font-semibold text-gray-300 p-3 w-2/5">Tiêu đề</th>
+                                            <th className="text-left font-semibold text-gray-300 p-3">Nội dung phác họa</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {niche.video_ideas.map((idea, i) => (
                                             <tr key={i} className="border-t border-gray-700/50 hover:bg-gray-800/50 transition-colors">
-                                                <td className="p-3 align-top">
+                                                <td className="p-3 align-top text-center text-gray-400 font-bold">{i + 1}</td>
+                                                <td className="p-3 align-top break-words">
                                                     <p className="font-semibold text-gray-200">{idea.title.original}</p>
                                                     <p className="text-xs text-gray-400 italic">{idea.title.translated}</p>
                                                 </td>
-                                                <td className="p-3 text-gray-400 align-top">
+                                                <td className="p-3 text-gray-400 align-top break-words">
                                                     {idea.draft_content}
                                                 </td>
                                             </tr>

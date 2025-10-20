@@ -16,6 +16,7 @@ import {
 
 interface NicheCardProps {
   niche: Niche;
+  index: number;
   onDevelop: (nicheName: string) => void;
   analysisDepth: number;
   onToggleSave: (niche: Niche) => void;
@@ -67,13 +68,15 @@ const AnalysisMetric: React.FC<AnalysisMetricProps> = ({ icon, label, score, exp
 };
 
 
-const NicheCard: React.FC<NicheCardProps> = ({ niche, onDevelop, analysisDepth, onToggleSave, isSaved, onUseNiche, isGeneratingContent, hasContentPlan }) => {
+const NicheCard: React.FC<NicheCardProps> = ({ niche, index, onDevelop, analysisDepth, onToggleSave, isSaved, onUseNiche, isGeneratingContent, hasContentPlan }) => {
 
     return (
-        <div className="bg-gray-800/50 border border-gray-700 rounded-2xl shadow-lg p-6 w-full text-left transition-all duration-300 hover:border-teal-500 hover:shadow-teal-500/10 flex flex-col">
+        <div className={`border border-gray-700 rounded-2xl shadow-lg p-6 w-full text-left transition-all duration-300 hover:border-teal-500 hover:shadow-teal-500/10 flex flex-col ${index % 2 === 0 ? 'bg-gray-800/50' : 'bg-gray-800/80'}`}>
             <div className="flex-grow">
-                <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-teal-400 text-transparent bg-clip-text">{niche.niche_name.original}</h2>
-                <h3 className="text-lg text-gray-400 -mt-1 mb-3">{niche.niche_name.translated}</h3>
+                <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-teal-400 text-transparent bg-clip-text">
+                  <span className="text-gray-500">{index + 1}.</span> {niche.niche_name.original}
+                </h2>
+                <h3 className="text-lg text-gray-400 -mt-1 mb-3 pl-8">{niche.niche_name.translated}</h3>
                 <p className="text-gray-400 mb-6">{niche.description}</p>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">

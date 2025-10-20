@@ -64,6 +64,7 @@ const App: React.FC = () => {
   const [customMarket, setCustomMarket] = useState<string>('');
   const [analysisDepth, setAnalysisDepth] = useState<number>(0);
   const [savedNiches, setSavedNiches] = useState<Niche[]>([]);
+  const [numResults, setNumResults] = useState<string>('Auto');
 
   // Filters
   const [interestLevel, setInterestLevel] = useState<FilterLevel>('all');
@@ -296,10 +297,11 @@ rồi chúng ta có thể dùng cái tex này sửa đổi lại nội dung cho 
     }
   
     const marketToAnalyze = targetMarket === 'Custom' ? customMarket : targetMarket;
+    const countToGenerate = numResults === 'Auto' ? 5 : parseInt(numResults, 10);
   
     try {
       const options = {
-        countToGenerate: 5,
+        countToGenerate,
         existingNichesToAvoid: (isLoadMore && analysisResult) ? analysisResult.niches.map(n => n.niche_name.original) : [],
         filters: {
             interest: interestLevel,
@@ -543,28 +545,47 @@ rồi chúng ta có thể dùng cái tex này sửa đổi lại nội dung cho 
               isLoading={isLoading}
             />
             <div className="w-full text-left bg-gray-800/50 border border-gray-700 p-4 rounded-lg space-y-4">
-                <div>
-                    <label htmlFor="market-select" className="block text-sm font-medium text-gray-400 mb-2">Thị trường hướng đến</label>
-                    <select
-                        id="market-select"
-                        value={targetMarket}
-                        onChange={(e) => setTargetMarket(e.target.value)}
-                        className="w-full p-3 bg-gray-800 border-2 border-gray-700 rounded-lg focus:ring-2 focus:ring-teal-400 focus:border-teal-400 outline-none transition-all duration-300"
-                        disabled={isLoading}
-                    >
-                        {markets.map(m => <option key={m} value={m}>{m === 'Custom' ? 'Tùy chỉnh...' : m}</option>)}
-                    </select>
-                    {targetMarket === 'Custom' && (
-                        <input
-                            type="text"
-                            value={customMarket}
-                            onChange={(e) => setCustomMarket(e.target.value)}
-                            placeholder="Nhập thị trường khác (ví dụ: 'Ấn Độ', 'Brazil')"
-                            className="w-full mt-2 p-3 bg-gray-800 border-2 border-gray-700 rounded-lg focus:ring-2 focus:ring-teal-400 focus:border-teal-400 outline-none transition-all duration-300 placeholder-gray-500"
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label htmlFor="market-select" className="block text-sm font-medium text-gray-400 mb-2">Thị trường hướng đến</label>
+                        <select
+                            id="market-select"
+                            value={targetMarket}
+                            onChange={(e) => setTargetMarket(e.target.value)}
+                            className="w-full p-3 bg-gray-800 border-2 border-gray-700 rounded-lg focus:ring-2 focus:ring-teal-400 focus:border-teal-400 outline-none transition-all duration-300"
                             disabled={isLoading}
-                        />
-                    )}
+                        >
+                            {markets.map(m => <option key={m} value={m}>{m === 'Custom' ? 'Tùy chỉnh...' : m}</option>)}
+                        </select>
+                    </div>
+                    <div>
+                        <label htmlFor="num-results-select" className="block text-sm font-medium text-gray-400 mb-2">Số kết quả trả về</label>
+                        <select
+                            id="num-results-select"
+                            value={numResults}
+                            onChange={(e) => setNumResults(e.target.value)}
+                            className="w-full p-3 bg-gray-800 border-2 border-gray-700 rounded-lg focus:ring-2 focus:ring-teal-400 focus:border-teal-400 outline-none transition-all duration-300"
+                            disabled={isLoading}
+                        >
+                            <option value="Auto">Auto (5)</option>
+                            <option value="10">10</option>
+                            <option value="15">15</option>
+                            <option value="20">20</option>
+                        </select>
+                    </div>
                 </div>
+
+                {targetMarket === 'Custom' && (
+                    <input
+                        type="text"
+                        value={customMarket}
+                        onChange={(e) => setCustomMarket(e.target.value)}
+                        placeholder="Nhập thị trường khác (ví dụ: 'Ấn Độ', 'Brazil')"
+                        className="w-full p-3 bg-gray-800 border-2 border-gray-700 rounded-lg focus:ring-2 focus:ring-teal-400 focus:border-teal-400 outline-none transition-all duration-300 placeholder-gray-500"
+                        disabled={isLoading}
+                    />
+                )}
+
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
                     <FilterDropdown label="Mức độ quan tâm" value={interestLevel} onChange={setInterestLevel} disabled={isLoading} />
                     <FilterDropdown label="Tiềm năng kiếm tiền" value={monetizationLevel} onChange={setMonetizationLevel} disabled={isLoading} />
@@ -598,6 +619,7 @@ rồi chúng ta có thể dùng cái tex này sửa đổi lại nội dung cho 
                       onUseNiche={handleUseNiche}
                       generatingContentForNiche={generatingContentForNiche}
                       contentPlanCache={contentPlanCache}
+                      numResults={numResults}
                     />
                 </>
             ) : (

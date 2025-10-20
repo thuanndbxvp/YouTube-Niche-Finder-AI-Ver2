@@ -14,9 +14,13 @@ interface ResultsDisplayProps {
   onUseNiche: (niche: Niche) => void;
   generatingContentForNiche: string | null;
   contentPlanCache: Record<string, ContentPlanResult>;
+  numResults: string;
 }
 
-const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onDevelop, analysisDepth, onLoadMore, isLoadingMore, onToggleSave, savedNiches, onUseNiche, generatingContentForNiche, contentPlanCache }) => {
+const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onDevelop, analysisDepth, onLoadMore, isLoadingMore, onToggleSave, savedNiches, onUseNiche, generatingContentForNiche, contentPlanCache, numResults }) => {
+  
+  const numToAdd = numResults === 'Auto' ? 5 : parseInt(numResults, 10);
+
   return (
     <div className="w-full flex flex-col gap-8">
       {result.niches.map((niche, index) => {
@@ -26,6 +30,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onDevelop, anal
             <NicheCard 
               key={`${niche.niche_name.original}-${index}`} 
               niche={niche}
+              index={index}
               onDevelop={onDevelop}
               analysisDepth={analysisDepth}
               onToggleSave={onToggleSave}
@@ -50,7 +55,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onDevelop, anal
             ) : (
                 <>
                     <PlusCircleIcon />
-                    <span>Thêm 5 kết quả</span>
+                    <span>Thêm {numToAdd} kết quả</span>
                 </>
             )}
         </button>

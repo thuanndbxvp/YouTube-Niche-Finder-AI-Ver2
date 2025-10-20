@@ -49,11 +49,17 @@ const ContentPlanModal: React.FC<ContentPlanModalProps> = ({ isOpen, onClose, co
             </button>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-900/50">
+        <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-900/50">
           {contentPlan.content_ideas.map((idea, index) => (
-            <div key={index} className="bg-gray-800 border border-gray-700 rounded-lg p-5">
-              <h3 className="text-xl font-bold text-teal-300">{idea.title.original}</h3>
-              <h4 className="text-md text-gray-400 italic mb-4">{idea.title.translated}</h4>
+            <div 
+              key={index} 
+              className={`border border-gray-700/80 rounded-lg p-5 transition-colors duration-300 ${index % 2 === 0 ? 'bg-gray-800' : 'bg-gray-800/60'}`}
+            >
+              <h3 className="text-xl font-bold text-teal-300">
+                <span className="text-gray-400 font-bold">{`${index + 1}. `}</span>
+                {idea.title.original}
+              </h3>
+              <h4 className="text-md text-gray-400 italic mb-4 pl-7">{idea.title.translated}</h4>
 
               <div className="space-y-4">
                 <div>

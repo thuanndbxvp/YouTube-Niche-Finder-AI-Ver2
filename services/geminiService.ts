@@ -1,0 +1,271 @@
+// Fix: Implement Gemini API service functions.
+import { GoogleGenAI, Type, Content } from "@google/genai";
+import type { AnalysisResult, ChatMessage, FilterLevel } from '../types';
+
+/**
+ * Creates a GoogleGenAI instance with a specific API key.
+ * This overrides the guideline to use process.env.API_KEY exclusively,
+ * as per the user's request for multi-key management UI.
+ */
+const getGenAI = (apiKey: string) => new GoogleGenAI({ apiKey });
+
+interface AnalysisFilters {
+    interest?: FilterLevel;
+    monetization?: FilterLevel;
+    competition?: FilterLevel;
+    sustainability?: FilterLevel;
+}
+
+const responseSchema = {
+    type: Type.OBJECT,
+    properties: {
+        niches: {
+            type: Type.ARRAY,
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    niche_name: {
+                        type: Type.OBJECT,
+                        properties: {
+                            original: { type: Type.STRING },
+                            translated: { type: Type.STRING }
+                        },
+                        required: ["original", "translated"]
+                    },
+                    description: { type: Type.STRING },
+                    audience_demographics: { type: Type.STRING },
+                    analysis: {
+                        type: Type.OBJECT,
+                        properties: {
+                             interest_level: {
+                                type: Type.OBJECT,
+                                properties: {
+                                    score: { type: Type.INTEGER, description: "Score from 1-100 for interest level." },
+                                    explanation: { type: Type.STRING, description: "Explanation in Vietnamese." }
+                                },
+                                required: ["score", "explanation"]
+                            },
+                            monetization_potential: {
+                                type: Type.OBJECT,
+                                properties: {
+                                    score: { type: Type.INTEGER, description: "Score from 1-100 for monetization potential." },
+                                    rpm_estimate: { type: Type.STRING, description: "Estimated RPM range, e.g., '$1 - $5'." },
+                                    explanation: { type: Type.STRING, description: "Explanation in Vietnamese." }
+                                },
+                                required: ["score", "rpm_estimate", "explanation"]
+                            },
+                            competition_level: {
+                                type: Type.OBJECT,
+                                properties: {
+                                    score: { type: Type.INTEGER, description: "Score from 1-100 for competition level. Lower is better." },
+                                    explanation: { type: Type.STRING, description: "Explanation in Vietnamese." }
+                                },
+                                required: ["score", "explanation"]
+                            },
+                            sustainability: {
+                                type: Type.OBJECT,
+                                properties: {
+                                    score: { type: Type.INTEGER, description: "Score from 1-100 for sustainability." },
+                                    explanation: { type: Type.STRING, description: "Explanation in Vietnamese." }
+                                },
+                                required: ["score", "explanation"]
+                            }
+                        },
+                        required: ["interest_level", "monetization_potential", "competition_level", "sustainability"]
+                    },
+                    content_strategy: { type: Type.STRING },
+                    video_ideas: {
+                        type: Type.ARRAY,
+                        items: {
+                            type: Type.OBJECT,
+                            properties: {
+                                title: {
+                                    type: Type.OBJECT,
+                                    properties: {
+                                        original: { type: Type.STRING },
+                                        translated: { type: Type.STRING }
+                                    },
+                                    required: ["original", "translated"]
+                                },
+                                draft_content: { type: Type.STRING, description: "A short (1-2 sentences) draft/outline of the video content, in VIETNAMESE." }
+                            },
+                            required: ["title", "draft_content"]
+                        }
+                    },
+                },
+                required: ["niche_name", "description", "audience_demographics", "analysis", "content_strategy", "video_ideas"]
+            }
+        }
+    },
+    required: ["niches"]
+};
+
+const analysisSystemInstruction = (countToGenerate: number, existingNichesToAvoid: string[], filters: AnalysisFilters) => {
+    let instruction = `You are a YouTube Niche Analysis AI. Your goal is to provide a detailed, data-driven analysis of a user-provided niche idea.
+IMPORTANT: All explanatory and descriptive text (description, demographics, explanations, strategy, draft_content, etc.) MUST be in VIETNAMESE.
+
+Analyze the user's idea and generate exactly ${countToGenerate} distinct sub-niches or angles related to it.
+For each niche, provide all the fields in the specified JSON structure.
+
+- niche_name: An object with two fields: "original" (a catchy name in the target market's native language) and "translated" (the Vietnamese translation).
+- description: A short paragraph in VIETNAMESE explaining what the niche is about.
+- audience_demographics: Describe the target audience in VIETNAMESE (age, gender, interests, etc.).
+- analysis: A detailed breakdown with scores from 1-100.
+    - interest_level: Score how high the search volume/interest is. Higher is better. Provide a brief VIETNAMESE explanation.
+    - monetization_potential: Score the potential for making money. Higher is better. Provide an estimated RPM range (e.g., "$1 - $5") and a VIETNAMESE explanation of monetization methods (AdSense, affiliates, etc.).
+    - competition_level: Score the level of competition. A LOWER score is better (less competition is good). Provide a VIETNAMESE explanation.
+    - sustainability: Score the long-term potential and evergreen nature of the niche. Higher is better. Provide a VIETNAMESE explanation.
+- content_strategy: Suggest a content strategy in VIETNAMESE (e.g., tutorials, reviews, vlogs) and posting frequency.
+- video_ideas: A list of 5-10 specific video ideas. Each idea must be an object with:
+    - "title": An object with "original" (the title in the target market's native language) and "translated" (the Vietnamese translation).
+    - "draft_content": A short, 1-2 sentence summary in VIETNAMESE outlining the potential content of the video.`;
+
+    const filterInstructions: string[] = [];
+    const scoreMap = {
+        low: "1-33",
+        medium: "34-66",
+        high: "67-100"
+    };
+
+    if (filters.interest && filters.interest !== 'all') {
+        filterInstructions.push(`- **Interest Level**: The 'interest_level.score' must be in the range ${scoreMap[filters.interest]}.`);
+    }
+    if (filters.monetization && filters.monetization !== 'all') {
+        filterInstructions.push(`- **Monetization Potential**: The 'monetization_potential.score' must be in the range ${scoreMap[filters.monetization]}.`);
+    }
+    if (filters.sustainability && filters.sustainability !== 'all') {
+        filterInstructions.push(`- **Sustainability**: The 'sustainability.score' must be in the range ${scoreMap[filters.sustainability]}.`);
+    }
+    if (filters.competition && filters.competition !== 'all') {
+        filterInstructions.push(`- **Competition Level**: The 'competition_level.score' must be in the range ${scoreMap[filters.competition]}. Remember for competition, a lower score is better.`);
+    }
+
+    if (filterInstructions.length > 0) {
+        instruction += `\n\nCRITICAL FILTERING REQUIREMENTS: You MUST adhere to the following constraints for every niche you generate:\n${filterInstructions.join('\n')}`;
+    }
+    
+    if (existingNichesToAvoid.length > 0) {
+        instruction += `\n\nIMPORTANT: You have already suggested the following niches. DO NOT suggest them again or anything too similar. Be creative and find new angles. Niches to avoid: ${existingNichesToAvoid.join(', ')}.`;
+    }
+    
+    return instruction;
+};
+
+interface AnalysisOptions {
+  existingNichesToAvoid?: string[];
+  countToGenerate?: number;
+  filters?: AnalysisFilters;
+}
+
+const executeWithRetry = async <T>(
+    apiKeys: string[], 
+    action: (ai: GoogleGenAI) => Promise<T>
+): Promise<{ result: T; successfulKeyIndex: number }> => {
+    if (!apiKeys || apiKeys.length === 0) {
+        throw new Error("Vui lòng cung cấp ít nhất một API Key.");
+    }
+    
+    let lastError: Error | null = null;
+
+    for (let i = 0; i < apiKeys.length; i++) {
+        const key = apiKeys[i];
+        if (!key.trim()) continue; // Skip empty keys
+        try {
+            const ai = getGenAI(key);
+            const result = await action(ai);
+            return { result, successfulKeyIndex: i };
+        } catch (err) {
+            console.error(`API Key bắt đầu bằng "${key.substring(0, 4)}..." đã thất bại. Đang thử key tiếp theo.`, err);
+            lastError = err as Error;
+        }
+    }
+
+    throw new Error(`Tất cả API key đều thất bại. Lỗi cuối cùng: ${lastError?.message || 'Không có key hợp lệ.'}`);
+}
+
+
+export const analyzeNicheIdea = async (
+  idea: string,
+  market: string,
+  apiKeys: string[],
+  trainingHistory: ChatMessage[],
+  options: AnalysisOptions = {}
+): Promise<{ result: AnalysisResult, successfulKeyIndex: number }> => {
+    const { existingNichesToAvoid = [], countToGenerate = 10, filters = {} } = options;
+    const modelName = 'gemini-2.5-pro';
+
+    const userPrompt = `Analyze the YouTube niche idea: "${idea}". Target market: ${market}.`;
+    
+    const contents: Content[] = [
+        ...trainingHistory.map(msg => ({
+            role: msg.role,
+            parts: msg.parts.map(p => {
+                if (p.inlineData) {
+                    return { inlineData: { mimeType: p.inlineData.mimeType, data: p.inlineData.data }};
+                }
+                return { text: p.text || '' };
+            })
+        })),
+        { role: 'user', parts: [{ text: userPrompt }] }
+    ];
+
+    const action = async (ai: GoogleGenAI) => {
+        const response = await ai.models.generateContent({
+            model: modelName,
+            contents: contents,
+            config: {
+                systemInstruction: analysisSystemInstruction(countToGenerate, existingNichesToAvoid, filters),
+                responseMimeType: "application/json",
+                responseSchema: responseSchema
+            }
+        });
+
+        const text = response.text;
+        try {
+            const parsedResult = JSON.parse(text);
+            if (!parsedResult.niches) {
+                return { niches: [] };
+            }
+            return parsedResult as AnalysisResult;
+        } catch (e) {
+            console.error("Failed to parse JSON response:", text);
+            throw new Error("The response from the AI was not valid JSON.");
+        }
+    };
+    
+    const { result, successfulKeyIndex } = await executeWithRetry(apiKeys, action);
+    return { result, successfulKeyIndex };
+};
+
+export const getTrainingResponse = async (
+    history: ChatMessage[],
+    apiKeys: string[],
+): Promise<{ result: string, successfulKeyIndex: number }> => {
+    const modelName = 'gemini-2.5-flash';
+
+    const contents: Content[] = history.map(msg => ({
+        role: msg.role,
+        parts: msg.parts.map(p => {
+            if (p.inlineData) {
+                return { inlineData: { mimeType: p.inlineData.mimeType, data: p.inlineData.data }};
+            }
+            return { text: p.text || '' };
+        })
+    }));
+
+    const systemInstruction = `You are a helpful AI assistant for a YouTube Niche Finder tool. The user is providing you with training data or asking questions about your capabilities. Respond conversationally and helpfully. Acknowledge that you have learned the information provided.`;
+
+    const action = async (ai: GoogleGenAI) => {
+         const response = await ai.models.generateContent({
+            model: modelName,
+            contents: contents,
+            config: {
+                systemInstruction
+            }
+        });
+        return response.text;
+    };
+
+    const { result, successfulKeyIndex } = await executeWithRetry(apiKeys, action);
+    return { result, successfulKeyIndex };
+};

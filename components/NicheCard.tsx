@@ -1,3 +1,4 @@
+
 // Fix: Implement the NicheCard component to display analysis results.
 import React from 'react';
 import type { Niche } from '../types';
@@ -111,7 +112,7 @@ const NicheCard: React.FC<NicheCardProps> = ({ niche, index, onDevelop, analysis
                                 <thead className="bg-gray-700/30">
                                     <tr>
                                         <th className="text-left font-semibold text-gray-300 p-3 w-1/3">Tiêu đề</th>
-                                        <th className="text-left font-semibold text-gray-300 p-3 w-2/3">Nội dung phác họa (sơ thảo)</th>
+                                        <th className="text-left font-semibold text-gray-300 p-3 w-2/3">Nội dung phác họa</th>
                                     </tr>
                                 </thead>
                                 <tbody>

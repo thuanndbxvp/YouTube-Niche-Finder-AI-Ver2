@@ -511,7 +511,7 @@ const App: React.FC = () => {
 };
 
   const Logo: React.FC = () => (
-    <div className="flex items-center space-x-3">
+    <a href="/" className="flex items-center space-x-3">
       <svg
         className="h-10 w-10 text-red-500"
         fill="currentColor"
@@ -524,7 +524,7 @@ const App: React.FC = () => {
         YouTube Niche Finder{' '}
         <span className="bg-gradient-to-r from-blue-400 to-teal-400 text-transparent bg-clip-text">AI</span>
       </h1>
-    </div>
+    </a>
   );
 
   const hasValidApiKey = apiKeyStatuses.includes('valid');

@@ -15,7 +15,7 @@ export function exportNichesToCsv(niches: Niche[], filename: string = 'youtube_n
         return;
     }
 
-    const maxIdeas = Math.max(...niches.map(n => n.video_ideas.length), 5);
+    const maxIdeas = Math.max(...niches.map(n => (n.video_ideas || []).length), 0);
 
     const headers = [
         'Niche Name (Original)',
@@ -60,7 +60,7 @@ export function exportNichesToCsv(niches: Niche[], filename: string = 'youtube_n
         ];
 
         for (let i = 0; i < maxIdeas; i++) {
-            const idea = niche.video_ideas[i];
+            const idea = niche.video_ideas ? niche.video_ideas[i] : undefined;
             if (idea) {
                 row.push(escapeCsvCell(idea.title.original));
                 row.push(escapeCsvCell(idea.title.translated));

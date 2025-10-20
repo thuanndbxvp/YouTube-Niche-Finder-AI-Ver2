@@ -1,4 +1,3 @@
-
 // Fix: Implement the NicheCard component to display analysis results.
 import React from 'react';
 import type { Niche } from '../types';
@@ -26,6 +25,8 @@ interface NicheCardProps {
   onViewPlan: (niche: Niche) => void;
   isGeneratingContent: boolean;
   hasContentPlan: boolean;
+  onGenerateVideoIdeas: (niche: Niche) => void;
+  isGeneratingIdeas: boolean;
 }
 
 interface AnalysisMetricProps {
@@ -70,7 +71,8 @@ const AnalysisMetric: React.FC<AnalysisMetricProps> = ({ icon, label, score, exp
 };
 
 
-const NicheCard: React.FC<NicheCardProps> = ({ niche, index, onDevelop, analysisDepth, onToggleSave, isSaved, onUseNiche, onViewPlan, isGeneratingContent, hasContentPlan }) => {
+const NicheCard: React.FC<NicheCardProps> = ({ niche, index, onDevelop, analysisDepth, onToggleSave, isSaved, onUseNiche, onViewPlan, isGeneratingContent, hasContentPlan, onGenerateVideoIdeas, isGeneratingIdeas }) => {
+    const hasVideoIdeas = niche.video_ideas && niche.video_ideas.length > 0;
 
     return (
         <div className={`border border-gray-700 rounded-2xl shadow-lg p-6 w-full text-left transition-all duration-300 hover:border-teal-500 hover:shadow-teal-500/10 flex flex-col ${index % 2 === 0 ? 'bg-gray-800/50' : 'bg-gray-800/80'}`}>
@@ -107,29 +109,52 @@ const NicheCard: React.FC<NicheCardProps> = ({ niche, index, onDevelop, analysis
                 <div className="space-y-6">
                     <div>
                         <h3 className="text-lg font-semibold text-gray-200 mb-3 flex items-center"><UserGroupIcon /> <span className="ml-2">Ý tưởng Video</span></h3>
-                        <div className="overflow-x-auto bg-gray-900/50 rounded-lg border border-gray-700/50">
-                            <table className="w-full text-sm">
-                                <thead className="bg-gray-700/30">
-                                    <tr>
-                                        <th className="text-left font-semibold text-gray-300 p-3 w-1/3">Tiêu đề</th>
-                                        <th className="text-left font-semibold text-gray-300 p-3 w-2/3">Nội dung phác họa</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {niche.video_ideas.map((idea, i) => (
-                                        <tr key={i} className="border-t border-gray-700/50 hover:bg-gray-800/50 transition-colors">
-                                            <td className="p-3 align-top">
-                                                <p className="font-semibold text-gray-200">{idea.title.original}</p>
-                                                <p className="text-xs text-gray-400 italic">{idea.title.translated}</p>
-                                            </td>
-                                            <td className="p-3 text-gray-400 align-top">
-                                                {idea.draft_content}
-                                            </td>
+                        
+                        {hasVideoIdeas ? (
+                            <div className="overflow-x-auto bg-gray-900/50 rounded-lg border border-gray-700/50">
+                                <table className="w-full text-sm">
+                                    <thead className="bg-gray-700/30">
+                                        <tr>
+                                            <th className="text-left font-semibold text-gray-300 p-3 w-1/3">Tiêu đề</th>
+                                            <th className="text-left font-semibold text-gray-300 p-3 w-2/3">Nội dung phác họa</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                                    </thead>
+                                    <tbody>
+                                        {niche.video_ideas.map((idea, i) => (
+                                            <tr key={i} className="border-t border-gray-700/50 hover:bg-gray-800/50 transition-colors">
+                                                <td className="p-3 align-top">
+                                                    <p className="font-semibold text-gray-200">{idea.title.original}</p>
+                                                    <p className="text-xs text-gray-400 italic">{idea.title.translated}</p>
+                                                </td>
+                                                <td className="p-3 text-gray-400 align-top">
+                                                    {idea.draft_content}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : (
+                             <div className="flex justify-center items-center p-4 bg-gray-900/50 rounded-lg border border-dashed border-gray-700/50">
+                                <button
+                                    onClick={() => onGenerateVideoIdeas(niche)}
+                                    disabled={isGeneratingIdeas}
+                                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isGeneratingIdeas ? (
+                                        <>
+                                            <div className="w-5 h-5 border-2 border-t-white border-indigo-800 rounded-full animate-spin"></div>
+                                            <span>Đang tạo...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <LightBulbIcon />
+                                            <span>Tạo Ý tưởng Video</span>
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -158,7 +183,7 @@ const NicheCard: React.FC<NicheCardProps> = ({ niche, index, onDevelop, analysis
                     </button>
                 )}
 
-                {analysisDepth >= 1 && (
+                {analysisDepth >= 1 && (hasVideoIdeas || hasContentPlan) && (
                      <button
                         onClick={() => hasContentPlan ? onViewPlan(niche) : onUseNiche(niche)}
                         disabled={isGeneratingContent}

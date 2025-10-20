@@ -32,8 +32,8 @@ const InitialSuggestions: React.FC<{ setUserInput: (value: string) => void }> = 
   return (
     <div className="text-center text-gray-500 p-8 border-2 border-dashed border-gray-700 rounded-xl">
       <p className="text-xl font-medium">Kết quả phân tích ngách sẽ xuất hiện ở đây.</p>
-      <p className="mt-4 mb-4">Bắt đầu bằng cách nhập một ý tưởng, hoặc chọn một trong các gợi ý dưới đây:</p>
-      <div className="flex flex-wrap justify-center gap-2">
+      <p className="mt-4 mb-6 text-lg font-medium text-gray-300">Bắt đầu bằng cách nhập một ý tưởng, hoặc chọn một trong các gợi ý dưới đây:</p>
+      <div className="flex flex-wrap justify-center gap-3">
         {displayedSuggestions.map((suggestion, index) => (
           <button
             key={index}

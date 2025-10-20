@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { analyzeNicheIdea, getTrainingResponse, generateContentPlan, validateApiKey, developVideoIdeas } from './services/geminiService';
+
+import React, { useState, useEffect, useRef } from 'react';
+import { analyzeNicheIdea, getTrainingResponse, generateContentPlan, validateApiKey, developVideoIdeas, generateVideoIdeasForNiche } from './services/geminiService';
 import type { AnalysisResult, ChatMessage, Part, Niche, FilterLevel, ContentPlanResult, Notification as NotificationType } from './types';
 import SearchBar from './components/SearchBar';
 import ResultsDisplay from './components/ResultsDisplay';
@@ -102,12 +103,15 @@ const App: React.FC = () => {
   const [contentPlan, setContentPlan] = useState<ContentPlanResult | null>(null);
   const [isContentPlanModalOpen, setIsContentPlanModalOpen] = useState<boolean>(false);
   const [generatingNiches, setGeneratingNiches] = useState<Set<string>>(new Set());
+  const [generatingVideoIdeas, setGeneratingVideoIdeas] = useState<Set<string>>(new Set());
   const [contentPlanCache, setContentPlanCache] = useState<Record<string, ContentPlanResult>>({});
   const [activeNicheForContentPlan, setActiveNicheForContentPlan] = useState<Niche | null>(null);
   const [isContentPlanLoadingMore, setIsContentPlanLoadingMore] = useState<boolean>(false);
   
   // Notifications State
   const [notifications, setNotifications] = useState<NotificationType[]>([]);
+  
+  const suggestionsRef = useRef<HTMLDivElement>(null);
 
   // Helper function to validate keys and set statuses
   const checkAndSetApiKeys = async (keysToCheck: string[]) => {
@@ -353,8 +357,57 @@ const App: React.FC = () => {
   const handleDevelopIdea = (idea: string) => runAnalysis(idea, false);
   const handleLoadMore = () => runAnalysis(userInput, false, true);
   
+  const handleScrollView = () => {
+    suggestionsRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   const removeNotification = (id: number) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
+  };
+
+  const handleGenerateVideoIdeas = async (nicheToUpdate: Niche) => {
+    const nicheName = nicheToUpdate.niche_name.original;
+    if (generatingVideoIdeas.has(nicheName)) return;
+
+    const hasValidKey = apiKeyStatuses.includes('valid');
+    if (apiKeys.length === 0 || !hasValidKey) {
+        showNoApiKeyError();
+        return;
+    }
+
+    setGeneratingVideoIdeas(prev => new Set(prev).add(nicheName));
+    setError(null);
+
+    try {
+        const { result, successfulKeyIndex } = await generateVideoIdeasForNiche(nicheToUpdate, apiKeys, trainingChatHistory);
+        setActiveApiKeyIndex(successfulKeyIndex);
+
+        setAnalysisResult(prevResult => {
+            if (!prevResult) return null;
+            const newNiches = prevResult.niches.map(niche => {
+                if (niche.niche_name.original === nicheName) {
+                    return { ...niche, video_ideas: result.video_ideas };
+                }
+                return niche;
+            });
+            return { niches: newNiches };
+        });
+
+    } catch (err: any) {
+        console.error(err);
+        setNotifications(prev => [...prev, {
+            id: Date.now(),
+            message: `Lỗi khi tạo ý tưởng video cho niche: "${nicheToUpdate.niche_name.translated}". ${err.message || 'Vui lòng thử lại.'}`,
+            type: 'error'
+        }]);
+        setActiveApiKeyIndex(null);
+    } finally {
+        setGeneratingVideoIdeas(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(nicheName);
+            return newSet;
+        });
+    }
   };
   
   const handleUseNiche = async (niche: Niche) => {
@@ -433,6 +486,7 @@ const App: React.FC = () => {
       const { result: newContent, successfulKeyIndex } = await generateContentPlan(
         activeNicheForContentPlan,
         apiKeys,
+// FIX: Cannot find name 'trainingHistory'. Did you mean 'trainingChatHistory'?
         trainingChatHistory,
         options
       );
@@ -641,16 +695,27 @@ const App: React.FC = () => {
                     <FilterDropdown label="Tính bền vững" value={sustainabilityLevel} onChange={setSustainabilityLevel} disabled={isLoading} />
                 </div>
             </div>
-             <button
-                onClick={handleAnalysis}
-                disabled={isLoading}
-                className="w-full sm:w-auto px-8 py-3 bg-gradient-to-r from-blue-500 to-teal-500 text-white font-semibold rounded-lg shadow-md hover:shadow-lg hover:from-blue-600 hover:to-teal-600 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 flex items-center justify-center space-x-2"
-              >
-                <span>{isLoading ? 'Đang phân tích...' : 'Phân Tích Ý Tưởng'}</span>
-              </button>
+             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <button
+                    onClick={handleAnalysis}
+                    disabled={isLoading}
+                    className="w-full sm:flex-1 px-8 py-3 bg-gradient-to-r from-blue-500 to-teal-500 text-white font-semibold rounded-lg shadow-md hover:shadow-lg hover:from-blue-600 hover:to-teal-600 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 flex items-center justify-center space-x-2"
+                >
+                    <span>{isLoading ? 'Đang phân tích...' : 'Phân Tích Ý Tưởng'}</span>
+                </button>
+                {!analysisResult && !isLoading && !error && (
+                    <button
+                        onClick={handleScrollView}
+                        disabled={isLoading}
+                        className="w-full sm:flex-1 px-6 py-3 bg-gray-700 text-gray-300 font-semibold rounded-lg hover:bg-gray-600 hover:text-white transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
+                    >
+                        <span>Xem gợi ý</span>
+                    </button>
+                )}
+             </div>
           </div>
           
-          <div className="w-full pt-8">
+          <div className="w-full pt-8" ref={suggestionsRef}>
             {isLoading && <Loader />}
             
             {analysisResult && !isLoading ? (
@@ -669,6 +734,8 @@ const App: React.FC = () => {
                       generatingNiches={generatingNiches}
                       contentPlanCache={contentPlanCache}
                       numResults={numResults}
+                      onGenerateVideoIdeas={handleGenerateVideoIdeas}
+                      generatingVideoIdeas={generatingVideoIdeas}
                     />
                 </>
             ) : (

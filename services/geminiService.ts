@@ -74,26 +74,8 @@ const responseSchema = {
                         required: ["interest_level", "monetization_potential", "competition_level", "sustainability"]
                     },
                     content_strategy: { type: Type.STRING },
-                    video_ideas: {
-                        type: Type.ARRAY,
-                        items: {
-                            type: Type.OBJECT,
-                            properties: {
-                                title: {
-                                    type: Type.OBJECT,
-                                    properties: {
-                                        original: { type: Type.STRING },
-                                        translated: { type: Type.STRING }
-                                    },
-                                    required: ["original", "translated"]
-                                },
-                                draft_content: { type: Type.STRING, description: "A short (1-2 sentences) draft/outline of the video content, in VIETNAMESE." }
-                            },
-                            required: ["title", "draft_content"]
-                        }
-                    },
                 },
-                required: ["niche_name", "description", "audience_demographics", "analysis", "content_strategy", "video_ideas"]
+                required: ["niche_name", "description", "audience_demographics", "analysis", "content_strategy"]
             }
         }
     },
@@ -102,10 +84,10 @@ const responseSchema = {
 
 const analysisSystemInstruction = (countToGenerate: number, existingNichesToAvoid: string[], filters: AnalysisFilters) => {
     let instruction = `You are a YouTube Niche Analysis AI. Your goal is to provide a detailed, data-driven analysis of a user-provided niche idea.
-IMPORTANT: All explanatory and descriptive text (description, demographics, explanations, strategy, draft_content, etc.) MUST be in VIETNAMESE.
+IMPORTANT: All explanatory and descriptive text (description, demographics, explanations, strategy, etc.) MUST be in VIETNAMESE.
 
 Analyze the user's idea and generate exactly ${countToGenerate} distinct sub-niches or angles related to it.
-For each niche, provide all the fields in the specified JSON structure.
+For each niche, provide all the fields in the specified JSON structure. DO NOT generate 'video_ideas'.
 
 - niche_name: An object with two fields: "original" (a catchy name in the target market's native language) and "translated" (the Vietnamese translation).
 - description: A short paragraph in VIETNAMESE explaining what the niche is about.
@@ -115,10 +97,7 @@ For each niche, provide all the fields in the specified JSON structure.
     - monetization_potential: Score the potential for making money. Higher is better. Provide an estimated RPM range (e.g., "$1 - $5") and a VIETNAMESE explanation of monetization methods (AdSense, affiliates, etc.).
     - competition_level: Score the level of competition. A LOWER score is better (less competition is good). Provide a VIETNAMESE explanation.
     - sustainability: Score the long-term potential and evergreen nature of the niche. Higher is better. Provide a VIETNAMESE explanation.
-- content_strategy: Suggest a content strategy in VIETNAMESE (e.g., tutorials, reviews, vlogs) and posting frequency.
-- video_ideas: A list of 5-10 specific video ideas. Each idea must be an object with:
-    - "title": An object with "original" (the title in the target market's native language) and "translated" (the Vietnamese translation).
-    - "draft_content": A short, 1-2 sentence summary in VIETNAMESE outlining the potential content of the video.`;
+- content_strategy: Suggest a content strategy in VIETNAMESE (e.g., tutorials, reviews, vlogs) and posting frequency.`;
 
     const filterInstructions: string[] = [];
     const scoreMap = {
@@ -408,7 +387,7 @@ export const developVideoIdeas = async (
 ): Promise<{ result: ContentPlanResult, successfulKeyIndex: number }> => {
     const modelName = 'gemini-2.5-pro';
     
-    const ideasToDevelop = niche.video_ideas.map(idea => 
+    const ideasToDevelop = (niche.video_ideas || []).map(idea => 
         `- Title (Original): ${idea.title.original}\n  Title (Translated): ${idea.title.translated}\n  Draft Content: ${idea.draft_content}`
     ).join('\n\n');
 
@@ -448,6 +427,91 @@ export const developVideoIdeas = async (
         }
     };
     
+    const { result, successfulKeyIndex } = await executeWithRetry(apiKeys, action);
+    return { result, successfulKeyIndex };
+};
+
+const videoIdeasResponseSchema = {
+    type: Type.OBJECT,
+    properties: {
+        video_ideas: {
+            type: Type.ARRAY,
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    title: {
+                        type: Type.OBJECT,
+                        properties: {
+                            original: { type: Type.STRING },
+                            translated: { type: Type.STRING }
+                        },
+                        required: ["original", "translated"]
+                    },
+                    draft_content: { type: Type.STRING, description: "A short (1-2 sentences) draft/outline of the video content, in VIETNAMESE." }
+                },
+                required: ["title", "draft_content"]
+            }
+        }
+    },
+    required: ["video_ideas"]
+};
+
+const videoIdeasSystemInstruction = (nicheName: string, nicheDescription: string) => {
+    return `You are an expert YouTube Content Strategist. Your task is to generate 5-10 creative and engaging video ideas for the given niche.
+IMPORTANT: All explanatory text (draft_content) MUST be in VIETNAMESE.
+
+- Niche context:
+  - Name: ${nicheName}
+  - Description: ${nicheDescription}
+
+- For each idea, you MUST provide:
+  - "title": An object with "original" (a viral, catchy title in the target market's native language) and "translated" (the Vietnamese translation).
+  - "draft_content": A short, 1-2 sentence summary in VIETNAMESE outlining the potential content of the video.
+  
+Generate exactly 10 distinct and creative video ideas.`;
+};
+
+export const generateVideoIdeasForNiche = async (
+    niche: Niche,
+    apiKeys: string[],
+    trainingHistory: ChatMessage[]
+): Promise<{ result: { video_ideas: VideoIdea[] }, successfulKeyIndex: number }> => {
+    const modelName = 'gemini-2.5-flash';
+    const userPrompt = `Dựa trên ngách sau đây, hãy tạo 10 ý tưởng video.\n\nTên ngách: ${niche.niche_name.original}\nMô tả: ${niche.description}`;
+    
+    const contents: Content[] = [
+        ...trainingHistory.map(msg => ({
+            role: msg.role,
+            parts: msg.parts.map(p => {
+                if (p.inlineData) {
+                    return { inlineData: { mimeType: p.inlineData.mimeType, data: p.inlineData.data }};
+                }
+                return { text: p.text || '' };
+            })
+        })),
+        { role: 'user', parts: [{ text: userPrompt }] }
+    ];
+
+    const action = async (ai: GoogleGenAI) => {
+        const response = await ai.models.generateContent({
+            model: modelName,
+            contents: contents,
+            config: {
+                systemInstruction: videoIdeasSystemInstruction(niche.niche_name.original, niche.description),
+                responseMimeType: "application/json",
+                responseSchema: videoIdeasResponseSchema
+            }
+        });
+
+        const text = response.text;
+        try {
+            return JSON.parse(text) as { video_ideas: VideoIdea[] };
+        } catch (e) {
+            console.error("Failed to parse JSON for video ideas:", text);
+            throw new Error("The response from the AI for video ideas was not valid JSON.");
+        }
+    };
+
     const { result, successfulKeyIndex } = await executeWithRetry(apiKeys, action);
     return { result, successfulKeyIndex };
 };

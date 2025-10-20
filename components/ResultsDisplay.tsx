@@ -16,9 +16,11 @@ interface ResultsDisplayProps {
   generatingNiches: Set<string>;
   contentPlanCache: Record<string, ContentPlanResult>;
   numResults: string;
+  onGenerateVideoIdeas: (niche: Niche) => void;
+  generatingVideoIdeas: Set<string>;
 }
 
-const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onDevelop, analysisDepth, onLoadMore, isLoadingMore, onToggleSave, savedNiches, onUseNiche, onViewPlan, generatingNiches, contentPlanCache, numResults }) => {
+const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onDevelop, analysisDepth, onLoadMore, isLoadingMore, onToggleSave, savedNiches, onUseNiche, onViewPlan, generatingNiches, contentPlanCache, numResults, onGenerateVideoIdeas, generatingVideoIdeas }) => {
   
   const numToAdd = parseInt(numResults, 10);
 
@@ -28,6 +30,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onDevelop, anal
         const isSaved = savedNiches.some(saved => saved.niche_name.original === niche.niche_name.original);
         const hasContentPlan = !!contentPlanCache[niche.niche_name.original];
         const isGenerating = generatingNiches.has(niche.niche_name.original);
+        const isGeneratingIdeas = generatingVideoIdeas.has(niche.niche_name.original);
         return (
             <NicheCard 
               key={`${niche.niche_name.original}-${index}`} 
@@ -41,6 +44,8 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onDevelop, anal
               onViewPlan={onViewPlan}
               isGeneratingContent={isGenerating}
               hasContentPlan={hasContentPlan}
+              onGenerateVideoIdeas={onGenerateVideoIdeas}
+              isGeneratingIdeas={isGeneratingIdeas}
             />
         );
       })}

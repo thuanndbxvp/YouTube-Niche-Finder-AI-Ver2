@@ -48,7 +48,7 @@ export interface Niche {
   audience_demographics: string;
   analysis: AnalysisMetrics;
   content_strategy: string;
-  video_ideas: VideoIdea[];
+  video_ideas?: VideoIdea[];
 }
 
 export interface AnalysisResult {

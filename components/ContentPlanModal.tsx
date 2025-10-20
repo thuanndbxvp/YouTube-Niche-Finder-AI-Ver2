@@ -1,15 +1,23 @@
 import React from 'react';
-import type { ContentPlanResult } from '../types';
-import { DocumentTextIcon, XIcon, SparklesIcon, LightBulbIcon } from './icons/Icons';
+import type { ContentPlanResult, Niche } from '../types';
+import { DocumentTextIcon, XIcon, SparklesIcon, LightBulbIcon, DownloadIcon } from './icons/Icons';
+import { exportContentPlanToTxt } from '../utils/export';
 
 interface ContentPlanModalProps {
   isOpen: boolean;
   onClose: () => void;
   contentPlan: ContentPlanResult | null;
+  activeNiche: Niche | null;
 }
 
-const ContentPlanModal: React.FC<ContentPlanModalProps> = ({ isOpen, onClose, contentPlan }) => {
+const ContentPlanModal: React.FC<ContentPlanModalProps> = ({ isOpen, onClose, contentPlan, activeNiche }) => {
   if (!isOpen || !contentPlan) return null;
+
+  const handleDownload = () => {
+    if (contentPlan && activeNiche) {
+        exportContentPlanToTxt(contentPlan, activeNiche.niche_name.original);
+    }
+  };
 
   return (
     <div 
@@ -27,7 +35,7 @@ const ContentPlanModal: React.FC<ContentPlanModalProps> = ({ isOpen, onClose, co
                 </div>
                 <div>
                     <h2 className="text-xl font-bold">Kế hoạch nội dung chi tiết</h2>
-                    <p className="text-sm text-gray-400">Dưới đây là các ý tưởng kịch bản chi tiết cho ngách đã chọn.</p>
+                    <p className="text-sm text-gray-400">Dưới đây là các ý tưởng kịch bản chi tiết cho ngách: <span className="font-semibold text-gray-300">{activeNiche?.niche_name.translated}</span></p>
                 </div>
             </div>
             <button
@@ -73,10 +81,17 @@ const ContentPlanModal: React.FC<ContentPlanModalProps> = ({ isOpen, onClose, co
             </div>
           ))}
         </div>
-         <footer className="p-4 border-t border-gray-700 flex justify-end">
+         <footer className="p-4 border-t border-gray-700 flex justify-end items-center gap-4">
+             <button
+                onClick={handleDownload}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-gray-200 rounded-md text-sm hover:bg-gray-500 hover:text-white font-semibold transition-colors"
+             >
+                <DownloadIcon/>
+                <span>Tải về (.txt)</span>
+             </button>
              <button
                 onClick={onClose}
-                className="px-4 py-2 bg-teal-600 rounded-md text-sm text-white hover:bg-teal-700 transition-colors"
+                className="px-4 py-2 bg-teal-600 rounded-md text-sm text-white hover:bg-teal-700 transition-colors font-semibold"
             >
                 Đóng
             </button>

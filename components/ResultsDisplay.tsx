@@ -1,5 +1,5 @@
 import React from 'react';
-import type { AnalysisResult, Niche } from '../types';
+import type { AnalysisResult, Niche, ContentPlanResult } from '../types';
 import NicheCard from './NicheCard';
 import { PlusCircleIcon } from './icons/Icons';
 
@@ -13,13 +13,15 @@ interface ResultsDisplayProps {
   savedNiches: Niche[];
   onUseNiche: (niche: Niche) => void;
   generatingContentForNiche: string | null;
+  contentPlanCache: Record<string, ContentPlanResult>;
 }
 
-const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onDevelop, analysisDepth, onLoadMore, isLoadingMore, onToggleSave, savedNiches, onUseNiche, generatingContentForNiche }) => {
+const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onDevelop, analysisDepth, onLoadMore, isLoadingMore, onToggleSave, savedNiches, onUseNiche, generatingContentForNiche, contentPlanCache }) => {
   return (
     <div className="w-full flex flex-col gap-8">
       {result.niches.map((niche, index) => {
         const isSaved = savedNiches.some(saved => saved.niche_name.original === niche.niche_name.original);
+        const hasContentPlan = !!contentPlanCache[niche.niche_name.original];
         return (
             <NicheCard 
               key={`${niche.niche_name.original}-${index}`} 
@@ -30,6 +32,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onDevelop, anal
               isSaved={isSaved}
               onUseNiche={onUseNiche}
               isGeneratingContent={generatingContentForNiche === niche.niche_name.original}
+              hasContentPlan={hasContentPlan}
             />
         );
       })}

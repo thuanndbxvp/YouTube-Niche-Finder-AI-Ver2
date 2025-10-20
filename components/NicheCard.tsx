@@ -22,6 +22,7 @@ interface NicheCardProps {
   isSaved: boolean;
   onUseNiche: (niche: Niche) => void;
   isGeneratingContent: boolean;
+  hasContentPlan: boolean;
 }
 
 interface AnalysisMetricProps {
@@ -66,7 +67,7 @@ const AnalysisMetric: React.FC<AnalysisMetricProps> = ({ icon, label, score, exp
 };
 
 
-const NicheCard: React.FC<NicheCardProps> = ({ niche, onDevelop, analysisDepth, onToggleSave, isSaved, onUseNiche, isGeneratingContent }) => {
+const NicheCard: React.FC<NicheCardProps> = ({ niche, onDevelop, analysisDepth, onToggleSave, isSaved, onUseNiche, isGeneratingContent, hasContentPlan }) => {
 
     return (
         <div className="bg-gray-800/50 border border-gray-700 rounded-2xl shadow-lg p-6 w-full text-left transition-all duration-300 hover:border-teal-500 hover:shadow-teal-500/10 flex flex-col">
@@ -156,7 +157,9 @@ const NicheCard: React.FC<NicheCardProps> = ({ niche, onDevelop, analysisDepth, 
                      <button
                         onClick={() => onUseNiche(niche)}
                         disabled={isGeneratingContent}
-                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className={`w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 text-white font-semibold rounded-lg shadow-md transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed ${
+                            hasContentPlan ? 'bg-teal-600 hover:bg-teal-700' : 'bg-green-600 hover:bg-green-700'
+                        }`}
                     >
                         {isGeneratingContent ? (
                             <>
@@ -166,7 +169,7 @@ const NicheCard: React.FC<NicheCardProps> = ({ niche, onDevelop, analysisDepth, 
                         ) : (
                              <>
                                 <CheckCircleIcon />
-                                <span>Sử dụng Niche này</span>
+                                <span>{hasContentPlan ? 'Xem lại kế hoạch' : 'Sử dụng Niche này'}</span>
                             </>
                         )}
                     </button>

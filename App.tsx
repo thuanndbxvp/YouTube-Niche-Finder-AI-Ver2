@@ -85,6 +85,8 @@ const App: React.FC = () => {
   const [contentPlan, setContentPlan] = useState<ContentPlanResult | null>(null);
   const [isContentPlanModalOpen, setIsContentPlanModalOpen] = useState<boolean>(false);
   const [generatingContentForNiche, setGeneratingContentForNiche] = useState<string | null>(null);
+  const [contentPlanCache, setContentPlanCache] = useState<Record<string, ContentPlanResult>>({});
+  const [activeNicheForContentPlan, setActiveNicheForContentPlan] = useState<Niche | null>(null);
 
 
   useEffect(() => {
@@ -259,6 +261,16 @@ rồi chúng ta có thể dùng cái tex này sửa đổi lại nội dung cho 
   const handleLoadMore = () => runAnalysis(userInput, false, true);
   
   const handleUseNiche = async (niche: Niche) => {
+    // 1. Check cache first
+    const cachedPlan = contentPlanCache[niche.niche_name.original];
+    if (cachedPlan) {
+        setContentPlan(cachedPlan);
+        setActiveNicheForContentPlan(niche);
+        setIsContentPlanModalOpen(true);
+        return;
+    }
+
+    // 2. If not in cache, proceed with API call
     if (apiKeys.length === 0) {
       setError('Vui lòng cấu hình API Key trước khi tạo kế hoạch nội dung.');
       return;
@@ -268,7 +280,14 @@ rồi chúng ta có thể dùng cái tex này sửa đổi lại nội dung cho 
     try {
         const { result, successfulKeyIndex } = await generateContentPlan(niche, apiKeys, trainingChatHistory);
         setActiveApiKeyIndex(successfulKeyIndex);
+        
+        // 3. Save to state and cache
         setContentPlan(result);
+        setContentPlanCache(prevCache => ({
+            ...prevCache,
+            [niche.niche_name.original]: result
+        }));
+        setActiveNicheForContentPlan(niche);
         setIsContentPlanModalOpen(true);
     } catch (err: any) {
         console.error(err);
@@ -452,6 +471,7 @@ rồi chúng ta có thể dùng cái tex này sửa đổi lại nội dung cho 
                       savedNiches={savedNiches}
                       onUseNiche={handleUseNiche}
                       generatingContentForNiche={generatingContentForNiche}
+                      contentPlanCache={contentPlanCache}
                     />
                 </>
             ) : (
@@ -489,6 +509,7 @@ rồi chúng ta có thể dùng cái tex này sửa đổi lại nội dung cho 
         isOpen={isContentPlanModalOpen}
         onClose={() => setIsContentPlanModalOpen(false)}
         contentPlan={contentPlan}
+        activeNiche={activeNicheForContentPlan}
       />
     </div>
   );

@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import type { Niche } from '../types';
-import { BookmarkIcon, XIcon, DownloadIcon, TrashIcon, GoogleIcon, CheckCircleIcon } from './icons/Icons';
+import { BookmarkIcon, XIcon, DownloadIcon, TrashIcon, GoogleIcon, CheckCircleIcon, ExclamationTriangleIcon } from './icons/Icons';
 import { generateNichesCsvContent } from '../utils/export';
 
 // --- Google API Configuration ---
-// IMPORTANT: Replace with your actual Google Cloud Client ID
+// BƯỚC QUAN TRỌNG: Thay thế giá trị dưới đây bằng Client ID của bạn từ Google Cloud Console.
+// Hướng dẫn: https://developers.google.com/drive/api/quickstart/js#authorize_credentials_for_a_web_application
 const CLIENT_ID = 'YOUR_CLIENT_ID.apps.googleusercontent.com';
 const SCOPES = 'https://www.googleapis.com/auth/drive.file';
 
@@ -25,47 +26,59 @@ const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, savedNiche
   const [isUploadingToDrive, setIsUploadingToDrive] = useState(false);
   const [uploadMessage, setUploadMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
+  const isGoogleDriveConfigured = CLIENT_ID && CLIENT_ID !== 'YOUR_CLIENT_ID.apps.googleusercontent.com';
+
   useEffect(() => {
-    const scriptGapi = document.createElement('script');
-    scriptGapi.src = 'https://apis.google.com/js/api.js';
-    scriptGapi.async = true;
-    scriptGapi.defer = true;
-    // FIX: Cast window to any to access gapi property injected by the Google API script.
-    scriptGapi.onload = () => (window as any).gapi.load('client', () => setGapiReady(true));
-    document.body.appendChild(scriptGapi);
+    if (isOpen && isGoogleDriveConfigured) {
+        // Dynamically load Google API scripts only when the modal is open and configured
+        const scriptGapi = document.createElement('script');
+        scriptGapi.src = 'https://apis.google.com/js/api.js';
+        scriptGapi.async = true;
+        scriptGapi.defer = true;
+        scriptGapi.onload = () => (window as any).gapi.load('client', () => setGapiReady(true));
+        document.body.appendChild(scriptGapi);
 
-    const scriptGis = document.createElement('script');
-    scriptGis.src = 'https://accounts.google.com/gsi/client';
-    scriptGis.async = true;
-    scriptGis.defer = true;
-    scriptGis.onload = () => setGisReady(true);
-    document.body.appendChild(scriptGis);
+        const scriptGis = document.createElement('script');
+        scriptGis.src = 'https://accounts.google.com/gsi/client';
+        scriptGis.async = true;
+        scriptGis.defer = true;
+        scriptGis.onload = () => setGisReady(true);
+        document.body.appendChild(scriptGis);
 
-    return () => {
-      document.body.removeChild(scriptGapi);
-      document.body.removeChild(scriptGis);
-    };
-  }, []);
+        return () => {
+          // Cleanup scripts when component unmounts
+          document.body.removeChild(scriptGapi);
+          document.body.removeChild(scriptGis);
+        };
+    }
+  }, [isOpen, isGoogleDriveConfigured]);
   
   const initGoogleClient = useCallback(() => {
     if (gapiReady && gisReady && (window as any).google && (window as any).gapi) {
-        const client = (window as any).google.accounts.oauth2.initTokenClient({
-            client_id: CLIENT_ID,
-            scope: SCOPES,
-            callback: (tokenResponse: any) => {
-                if (tokenResponse && tokenResponse.access_token) {
-                    (window as any).gapi.client.setToken(tokenResponse);
-                    setIsSignedIn(true);
-                }
-            },
-        });
-        setTokenClient(client);
+        try {
+            const client = (window as any).google.accounts.oauth2.initTokenClient({
+                client_id: CLIENT_ID,
+                scope: SCOPES,
+                callback: (tokenResponse: any) => {
+                    if (tokenResponse && tokenResponse.access_token) {
+                        (window as any).gapi.client.setToken(tokenResponse);
+                        setIsSignedIn(true);
+                    }
+                },
+            });
+            setTokenClient(client);
+        } catch (e: any) {
+             console.error("Error initializing Google Client:", e);
+             setUploadMessage({ type: 'error', text: `Lỗi khởi tạo Google Client. Vui lòng kiểm tra lại Client ID. Lỗi: ${e.message}` });
+        }
     }
   }, [gapiReady, gisReady]);
 
   useEffect(() => {
-    initGoogleClient();
-  }, [initGoogleClient]);
+    if (isGoogleDriveConfigured) {
+      initGoogleClient();
+    }
+  }, [initGoogleClient, isGoogleDriveConfigured]);
   
 
   const handleAuthClick = () => {
@@ -129,6 +142,62 @@ const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, savedNiche
     }
   };
 
+  if (!isOpen) {
+    return null;
+  }
+
+  const renderGoogleDriveSection = () => {
+      if (!isGoogleDriveConfigured) {
+          return (
+              <div className="text-sm text-yellow-300 bg-yellow-900/50 p-3 rounded-md border border-yellow-700/80 flex items-start gap-3">
+                  <div className="text-yellow-400 mt-0.5"><ExclamationTriangleIcon /></div>
+                  <div>
+                      <p className="font-bold">Tính năng Đồng bộ Google Drive chưa được cấu hình.</p>
+                      <p className="text-yellow-400">Để kích hoạt, nhà phát triển cần thêm Google Client ID hợp lệ vào file <code>components/LibraryModal.tsx</code>.</p>
+                  </div>
+              </div>
+          );
+      }
+      
+      if (!isSignedIn) {
+           return (
+                <button
+                    onClick={handleAuthClick}
+                    disabled={!gapiReady || !gisReady}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-white text-gray-800 font-semibold rounded-lg shadow-md hover:bg-gray-200 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    <GoogleIcon />
+                    <span>Đăng nhập với Google</span>
+                </button>
+           );
+      }
+
+      return (
+            <div className="space-y-3">
+                 <button
+                    onClick={handleUploadToDrive}
+                    disabled={isUploadingToDrive || savedNiches.length === 0}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                   {isUploadingToDrive ? (
+                        <>
+                            <div className="w-5 h-5 border-2 border-t-white border-blue-800 rounded-full animate-spin"></div>
+                            <span>Đang tải lên...</span>
+                        </>
+                    ) : (
+                        <>
+                            <GoogleIcon />
+                            <span>Lưu vào Google Drive</span>
+                        </>
+                    )}
+                </button>
+                 <button onClick={handleSignoutClick} className="w-full text-xs text-gray-400 hover:underline">
+                    Đăng xuất
+                </button>
+            </div>
+      );
+  }
+
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4" onClick={onClose}>
@@ -179,42 +248,9 @@ const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, savedNiche
         </div>
         
         <div className="p-4 border-t border-gray-700 space-y-4">
-            {/* Google Drive Section */}
             <div className="p-4 bg-gray-900/50 rounded-lg border border-gray-700/50">
                 <h3 className="font-semibold text-gray-200 mb-3">Đồng bộ với Google Drive</h3>
-                {!isSignedIn ? (
-                    <button
-                        onClick={handleAuthClick}
-                        disabled={!gapiReady || !gisReady}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-white text-gray-800 font-semibold rounded-lg shadow-md hover:bg-gray-200 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        <GoogleIcon />
-                        <span>Đăng nhập với Google</span>
-                    </button>
-                ) : (
-                    <div className="space-y-3">
-                         <button
-                            onClick={handleUploadToDrive}
-                            disabled={isUploadingToDrive || savedNiches.length === 0}
-                            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                           {isUploadingToDrive ? (
-                                <>
-                                    <div className="w-5 h-5 border-2 border-t-white border-blue-800 rounded-full animate-spin"></div>
-                                    <span>Đang tải lên...</span>
-                                </>
-                            ) : (
-                                <>
-                                    <GoogleIcon />
-                                    <span>Lưu vào Google Drive</span>
-                                </>
-                            )}
-                        </button>
-                         <button onClick={handleSignoutClick} className="w-full text-xs text-gray-400 hover:underline">
-                            Đăng xuất
-                        </button>
-                    </div>
-                )}
+                {renderGoogleDriveSection()}
                 {uploadMessage && (
                     <div className={`mt-3 p-2 rounded-md text-sm flex items-start gap-2 ${uploadMessage.type === 'success' ? 'bg-green-900/50 text-green-300' : 'bg-red-900/50 text-red-300'}`}>
                         <div className="mt-0.5"><CheckCircleIcon /></div>
@@ -223,7 +259,6 @@ const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, savedNiche
                 )}
             </div>
             
-            {/* Local Actions */}
              <div className="flex justify-end items-center gap-4">
                 <button
                     onClick={() => savedNiches.length > 0 && onDeleteAll()}

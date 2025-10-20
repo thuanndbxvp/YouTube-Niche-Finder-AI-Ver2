@@ -1,6 +1,6 @@
 // Fix: Implement Gemini API service functions.
 import { GoogleGenAI, Type, Content } from "@google/genai";
-import type { AnalysisResult, ChatMessage, FilterLevel, Niche, ContentPlanResult } from '../types';
+import type { AnalysisResult, ChatMessage, FilterLevel, Niche, ContentPlanResult, VideoIdea } from '../types';
 
 /**
  * Creates a GoogleGenAI instance with a specific API key.
@@ -381,6 +381,77 @@ export const generateContentPlan = async (
     const { result, successfulKeyIndex } = await executeWithRetry(apiKeys, action);
     return { result, successfulKeyIndex };
 };
+
+const developIdeasSystemInstruction = (nicheName: string, nicheDescription: string) => {
+    return `You are an expert YouTube Content Strategist and Scriptwriter. Your task is to take a provided list of video ideas (each with a title and draft content) and develop them into detailed content plans.
+IMPORTANT: All explanatory text (hook, main_points, call_to_action, visual_suggestions) MUST be in VIETNAMESE. DO NOT generate new ideas, only expand the ones provided by the user.
+
+- Niche context:
+  - Name: ${nicheName}
+  - Description: ${nicheDescription}
+
+For EACH idea provided by the user, you MUST develop it into the specified JSON structure:
+- title: Use the EXACT "original" and "translated" titles provided by the user for the idea.
+- hook: Create a powerful, attention-grabbing opening for the video (1-2 sentences) in VIETNAMESE.
+- main_points: Use the user-provided "draft_content" as the primary source and expand it into an array of 3-5 bullet points outlining the core content. In VIETNAMESE.
+- call_to_action: A clear and effective call to action for the end of the video. In VIETNAMESE.
+- visual_suggestions: Creative ideas for B-roll footage, on-screen graphics, or filming styles. In VIETNAMESE.
+
+Your output must be an array of these developed ideas, matching the order of the input.
+`;
+};
+
+export const developVideoIdeas = async (
+  niche: Niche,
+  apiKeys: string[],
+  trainingHistory: ChatMessage[]
+): Promise<{ result: ContentPlanResult, successfulKeyIndex: number }> => {
+    const modelName = 'gemini-2.5-pro';
+    
+    const ideasToDevelop = niche.video_ideas.map(idea => 
+        `- Title (Original): ${idea.title.original}\n  Title (Translated): ${idea.title.translated}\n  Draft Content: ${idea.draft_content}`
+    ).join('\n\n');
+
+    const userPrompt = `Dựa trên ngách sau đây và danh sách ý tưởng phác thảo này, hãy phát triển chúng thành kế hoạch nội dung chi tiết. Chỉ phát triển các ý tưởng được cung cấp, không tạo ý tưởng mới.\n\n**Ngách:** ${niche.niche_name.original}\n\n**Các ý tưởng cần phát triển:**\n${ideasToDevelop}`;
+    
+    const contents: Content[] = [
+        ...trainingHistory.map(msg => ({
+            role: msg.role,
+            parts: msg.parts.map(p => {
+                if (p.inlineData) {
+                    return { inlineData: { mimeType: p.inlineData.mimeType, data: p.inlineData.data }};
+                }
+                return { text: p.text || '' };
+            })
+        })),
+        { role: 'user', parts: [{ text: userPrompt }] }
+    ];
+
+    const action = async (ai: GoogleGenAI) => {
+        const response = await ai.models.generateContent({
+            model: modelName,
+            contents: contents,
+            config: {
+                systemInstruction: developIdeasSystemInstruction(niche.niche_name.original, niche.description),
+                responseMimeType: "application/json",
+                responseSchema: contentPlanResponseSchema
+            }
+        });
+
+        const text = response.text;
+        try {
+            const parsedResult = JSON.parse(text);
+            return parsedResult as ContentPlanResult;
+        } catch (e) {
+            console.error("Failed to parse JSON response:", text);
+            throw new Error("The response from the AI was not valid JSON.");
+        }
+    };
+    
+    const { result, successfulKeyIndex } = await executeWithRetry(apiKeys, action);
+    return { result, successfulKeyIndex };
+};
+
 
 export const validateApiKey = async (apiKey: string): Promise<boolean> => {
     if (!apiKey.trim()) return false;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { analyzeNicheIdea, getTrainingResponse, generateContentPlan, validateApiKey } from './services/geminiService';
+import { analyzeNicheIdea, getTrainingResponse, generateContentPlan, validateApiKey, developVideoIdeas } from './services/geminiService';
 import type { AnalysisResult, ChatMessage, Part, Niche, FilterLevel, ContentPlanResult, Notification as NotificationType } from './types';
 import SearchBar from './components/SearchBar';
 import ResultsDisplay from './components/ResultsDisplay';
@@ -352,7 +352,7 @@ const App: React.FC = () => {
     setError(null);
 
     try {
-        const { result, successfulKeyIndex } = await generateContentPlan(niche, apiKeys, trainingChatHistory);
+        const { result, successfulKeyIndex } = await developVideoIdeas(niche, apiKeys, trainingChatHistory);
         setActiveApiKeyIndex(successfulKeyIndex);
         
         setContentPlanCache(prevCache => ({
@@ -362,7 +362,7 @@ const App: React.FC = () => {
         
         setNotifications(prev => [...prev, {
             id: Date.now(),
-            message: `Đã tạo xong kế hoạch cho niche: "${niche.niche_name.translated}"`,
+            message: `Đã phát triển xong 5 ý tưởng ban đầu cho niche: "${niche.niche_name.translated}"`,
             type: 'success'
         }]);
 
@@ -370,7 +370,7 @@ const App: React.FC = () => {
         console.error(err);
         setNotifications(prev => [...prev, {
             id: Date.now(),
-            message: `Lỗi khi tạo kế hoạch cho niche: "${niche.niche_name.translated}". ${err.message || 'Vui lòng thử lại.'}`,
+            message: `Lỗi khi phát triển kế hoạch cho niche: "${niche.niche_name.translated}". ${err.message || 'Vui lòng thử lại.'}`,
             type: 'error'
         }]);
         setActiveApiKeyIndex(null);

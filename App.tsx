@@ -14,7 +14,7 @@ import PasswordModal from './components/PasswordModal';
 import ContentPlanModal from './components/ContentPlanModal';
 import ErrorModal from './components/ErrorModal';
 import NotificationCenter from './components/NotificationCenter';
-import { keyFindingTranscript, nicheKnowledgeBase } from './data/knowledgeBase';
+import { keyFindingTranscript, nicheKnowledgeBase, parseKnowledgeBaseForSuggestions } from './data/knowledgeBase';
 
 export type ApiKeyStatus = 'idle' | 'checking' | 'valid' | 'invalid';
 
@@ -55,6 +55,16 @@ const FilterDropdown: React.FC<{
     </div>
 );
 
+// Fisher-Yates shuffle algorithm
+const shuffleArray = (array: string[]) => {
+  const newArray = [...array];
+  for (let i = newArray.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+  }
+  return newArray;
+};
+
 
 const App: React.FC = () => {
   const [userInput, setUserInput] = useState<string>('');
@@ -67,6 +77,7 @@ const App: React.FC = () => {
   const [analysisDepth, setAnalysisDepth] = useState<number>(0);
   const [savedNiches, setSavedNiches] = useState<Niche[]>([]);
   const [numResults, setNumResults] = useState<string>('5');
+  const [searchPlaceholder, setSearchPlaceholder] = useState<string>("ví dụ: 'Khám phá không gian', 'Dự án DIY tại nhà', 'Nấu ăn'");
 
   // Filters
   const [interestLevel, setInterestLevel] = useState<FilterLevel>('all');
@@ -186,6 +197,14 @@ const App: React.FC = () => {
             }
         ];
         setTrainingChatHistory(defaultHistory);
+    }
+
+    // Set random placeholder for search bar
+    const suggestionsPool = parseKnowledgeBaseForSuggestions(nicheKnowledgeBase);
+    const shuffled = shuffleArray(suggestionsPool);
+    const placeholderSuggestions = shuffled.slice(0, 3);
+    if (placeholderSuggestions.length === 3) {
+        setSearchPlaceholder(`ví dụ: '${placeholderSuggestions[0]}', '${placeholderSuggestions[1]}', '${placeholderSuggestions[2]}'`);
     }
   }, []);
   
@@ -571,6 +590,7 @@ const App: React.FC = () => {
               setUserInput={setUserInput}
               handleAnalysis={handleAnalysis}
               isLoading={isLoading}
+              placeholder={searchPlaceholder}
             />
             <div className="w-full text-left bg-gray-800/50 border border-gray-700 p-4 rounded-lg space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

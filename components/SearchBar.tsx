@@ -6,9 +6,10 @@ interface SearchBarProps {
   setUserInput: (value: string) => void;
   handleAnalysis: () => void;
   isLoading: boolean;
+  placeholder: string;
 }
 
-const SearchBar: React.FC<SearchBarProps> = ({ userInput, setUserInput, handleAnalysis, isLoading }) => {
+const SearchBar: React.FC<SearchBarProps> = ({ userInput, setUserInput, handleAnalysis, isLoading, placeholder }) => {
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter' && !isLoading) {
       handleAnalysis();
@@ -23,7 +24,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ userInput, setUserInput, handleAn
           value={userInput}
           onChange={(e) => setUserInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="ví dụ: 'Khám phá không gian', 'Dự án DIY tại nhà', 'Nấu ăn'"
+          placeholder={placeholder}
           className="w-full pl-4 pr-12 py-3 bg-gray-800 border-2 border-gray-700 rounded-lg focus:ring-2 focus:ring-teal-400 focus:border-teal-400 outline-none transition-all duration-300 placeholder-gray-500"
           disabled={isLoading}
         />

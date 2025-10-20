@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { nicheKnowledgeBase, parseKnowledgeBaseForSuggestions } from '../data/knowledgeBase';
+import { PlusCircleIcon } from './icons/Icons';
 
 // Fisher-Yates shuffle algorithm
 const shuffleArray = (array: string[]) => {
@@ -11,21 +12,22 @@ const shuffleArray = (array: string[]) => {
   return newArray;
 };
 
-const NUMBER_OF_SUGGESTIONS_TO_SHOW = 50;
+const SUGGESTIONS_BATCH_SIZE = 50;
 
 const InitialSuggestions: React.FC<{ setUserInput: (value: string) => void }> = ({ setUserInput }) => {
-  const [displayedSuggestions, setDisplayedSuggestions] = useState<string[]>([]);
+  // Memoize the full shuffled list of suggestions so it doesn't change on re-renders.
+  const shuffledSuggestions = useMemo(() => {
+    const pool = parseKnowledgeBaseForSuggestions(nicheKnowledgeBase);
+    return shuffleArray(pool);
+  }, []);
+
+  const [visibleCount, setVisibleCount] = useState<number>(SUGGESTIONS_BATCH_SIZE);
+
+  const handleLoadMore = () => {
+    setVisibleCount(prevCount => prevCount + SUGGESTIONS_BATCH_SIZE);
+  };
   
-  // Parse the knowledge base to get a pool of suggestions.
-  // useMemo ensures this expensive operation only runs once.
-  const suggestionsPool = useMemo(() => parseKnowledgeBaseForSuggestions(nicheKnowledgeBase), []);
-
-
-  useEffect(() => {
-    // Shuffle the pool and take the desired number of suggestions to display.
-    const shuffled = shuffleArray(suggestionsPool);
-    setDisplayedSuggestions(shuffled.slice(0, NUMBER_OF_SUGGESTIONS_TO_SHOW));
-  }, [suggestionsPool]);
+  const displayedSuggestions = shuffledSuggestions.slice(0, visibleCount);
 
   return (
     <div className="text-center text-gray-500 p-8 border-2 border-dashed border-gray-700 rounded-xl">
@@ -42,6 +44,18 @@ const InitialSuggestions: React.FC<{ setUserInput: (value: string) => void }> = 
           </button>
         ))}
       </div>
+      
+      {visibleCount < shuffledSuggestions.length && (
+        <div className="mt-8 flex justify-center">
+            <button
+                onClick={handleLoadMore}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-gray-700 text-gray-300 font-semibold rounded-lg hover:bg-gray-600 hover:text-white transition-all duration-300"
+            >
+                <PlusCircleIcon />
+                <span>Nhiều gợi ý hơn</span>
+            </button>
+        </div>
+      )}
     </div>
   );
 };

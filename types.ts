@@ -25,7 +25,7 @@ interface AnalysisMetrics {
   monetization_potential: {
     score: number;
     rpm_estimate: string;
-    explanation: string;
+    explanation:string;
   };
   competition_level: {
     score: number;
@@ -56,3 +56,15 @@ export interface AnalysisResult {
 }
 
 export type FilterLevel = 'all' | 'low' | 'medium' | 'high';
+
+export interface DetailedVideoContent {
+  title: BilingualText;
+  hook: string; 
+  main_points: string[]; 
+  call_to_action: string; 
+  visual_suggestions: string; 
+}
+
+export interface ContentPlanResult {
+  content_ideas: DetailedVideoContent[];
+}

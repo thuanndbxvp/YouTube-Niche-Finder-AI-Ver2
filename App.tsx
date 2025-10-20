@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { analyzeNicheIdea, getTrainingResponse } from './services/geminiService';
-import type { AnalysisResult, ChatMessage, Part, Niche, FilterLevel } from './types';
+import { analyzeNicheIdea, getTrainingResponse, generateContentPlan } from './services/geminiService';
+import type { AnalysisResult, ChatMessage, Part, Niche, FilterLevel, ContentPlanResult } from './types';
 import SearchBar from './components/SearchBar';
 import ResultsDisplay from './components/ResultsDisplay';
 import Loader from './components/Loader';
@@ -11,6 +11,7 @@ import InitialSuggestions from './components/InitialSuggestions';
 import ActionBar from './components/ActionBar';
 import { exportNichesToCsv } from './utils/export';
 import PasswordModal from './components/PasswordModal';
+import ContentPlanModal from './components/ContentPlanModal';
 
 
 // Helper to convert File to a part for Gemini API
@@ -79,6 +80,11 @@ const App: React.FC = () => {
   const [trainingPassword, setTrainingPassword] = useState<string>('');
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState<boolean>(false);
   const [passwordModalMode, setPasswordModalMode] = useState<'login' | 'change'>('login');
+  
+  // Content Plan State
+  const [contentPlan, setContentPlan] = useState<ContentPlanResult | null>(null);
+  const [isContentPlanModalOpen, setIsContentPlanModalOpen] = useState<boolean>(false);
+  const [generatingContentForNiche, setGeneratingContentForNiche] = useState<string | null>(null);
 
 
   useEffect(() => {
@@ -236,9 +242,8 @@ rồi chúng ta có thể dùng cái tex này sửa đổi lại nội dung cho 
         setAnalysisResult(result);
       }
       
-      if (!isLoadMore) {
-        setAnalysisDepth(prev => isNewSearch ? 1 : prev + 1);
-      }
+      setAnalysisDepth(prev => isNewSearch ? 1 : prev + 1);
+
     } catch (err: any) {
       console.error(err);
       setError(`Không thể phân tích. Lỗi: ${err.message || 'Vui lòng kiểm tra lại API Keys và thử lại.'}`);
@@ -252,6 +257,28 @@ rồi chúng ta có thể dùng cái tex này sửa đổi lại nội dung cho 
   const handleAnalysis = () => runAnalysis(userInput, true);
   const handleDevelopIdea = (idea: string) => runAnalysis(idea, false);
   const handleLoadMore = () => runAnalysis(userInput, false, true);
+  
+  const handleUseNiche = async (niche: Niche) => {
+    if (apiKeys.length === 0) {
+      setError('Vui lòng cấu hình API Key trước khi tạo kế hoạch nội dung.');
+      return;
+    }
+    setGeneratingContentForNiche(niche.niche_name.original);
+    setError(null);
+    try {
+        const { result, successfulKeyIndex } = await generateContentPlan(niche, apiKeys, trainingChatHistory);
+        setActiveApiKeyIndex(successfulKeyIndex);
+        setContentPlan(result);
+        setIsContentPlanModalOpen(true);
+    } catch (err: any) {
+        console.error(err);
+        setError(`Không thể tạo kế hoạch nội dung. Lỗi: ${err.message || 'Vui lòng thử lại.'}`);
+        setActiveApiKeyIndex(null);
+    } finally {
+        setGeneratingContentForNiche(null);
+    }
+  };
+
 
   const handleToggleSaveNiche = (niche: Niche) => {
     setSavedNiches(prev => {
@@ -418,11 +445,13 @@ rồi chúng ta có thể dùng cái tex này sửa đổi lại nội dung cho 
                     <ResultsDisplay 
                       result={analysisResult} 
                       onDevelop={handleDevelopIdea}
-                      showUseThisNicheButton={analysisDepth > 0}
+                      analysisDepth={analysisDepth}
                       onLoadMore={handleLoadMore}
                       isLoadingMore={isLoadingMore}
                       onToggleSave={handleToggleSaveNiche}
                       savedNiches={savedNiches}
+                      onUseNiche={handleUseNiche}
+                      generatingContentForNiche={generatingContentForNiche}
                     />
                 </>
             ) : (
@@ -455,6 +484,11 @@ rồi chúng ta có thể dùng cái tex này sửa đổi lại nội dung cho 
         onSuccess={handlePasswordSuccess}
         mode={passwordModalMode}
         verifyPassword={verifyTrainingPassword}
+      />
+      <ContentPlanModal
+        isOpen={isContentPlanModalOpen}
+        onClose={() => setIsContentPlanModalOpen(false)}
+        contentPlan={contentPlan}
       />
     </div>
   );

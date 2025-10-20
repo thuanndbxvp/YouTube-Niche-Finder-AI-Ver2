@@ -6,14 +6,16 @@ import { PlusCircleIcon } from './icons/Icons';
 interface ResultsDisplayProps {
   result: AnalysisResult;
   onDevelop: (nicheName: string) => void;
-  showUseThisNicheButton: boolean;
+  analysisDepth: number;
   onLoadMore: () => void;
   isLoadingMore: boolean;
   onToggleSave: (niche: Niche) => void;
   savedNiches: Niche[];
+  onUseNiche: (niche: Niche) => void;
+  generatingContentForNiche: string | null;
 }
 
-const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onDevelop, showUseThisNicheButton, onLoadMore, isLoadingMore, onToggleSave, savedNiches }) => {
+const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onDevelop, analysisDepth, onLoadMore, isLoadingMore, onToggleSave, savedNiches, onUseNiche, generatingContentForNiche }) => {
   return (
     <div className="w-full flex flex-col gap-8">
       {result.niches.map((niche, index) => {
@@ -23,9 +25,11 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onDevelop, show
               key={`${niche.niche_name.original}-${index}`} 
               niche={niche}
               onDevelop={onDevelop}
-              showUseThisNicheButton={showUseThisNicheButton}
+              analysisDepth={analysisDepth}
               onToggleSave={onToggleSave}
               isSaved={isSaved}
+              onUseNiche={onUseNiche}
+              isGeneratingContent={generatingContentForNiche === niche.niche_name.original}
             />
         );
       })}

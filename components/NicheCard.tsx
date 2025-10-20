@@ -17,9 +17,11 @@ import {
 interface NicheCardProps {
   niche: Niche;
   onDevelop: (nicheName: string) => void;
-  showUseThisNicheButton: boolean;
+  analysisDepth: number;
   onToggleSave: (niche: Niche) => void;
   isSaved: boolean;
+  onUseNiche: (niche: Niche) => void;
+  isGeneratingContent: boolean;
 }
 
 interface AnalysisMetricProps {
@@ -64,13 +66,7 @@ const AnalysisMetric: React.FC<AnalysisMetricProps> = ({ icon, label, score, exp
 };
 
 
-const NicheCard: React.FC<NicheCardProps> = ({ niche, onDevelop, showUseThisNicheButton, onToggleSave, isSaved }) => {
-    
-    const handleUseNiche = () => {
-        // Placeholder for future functionality
-        console.log("Using niche:", niche.niche_name.original);
-        alert(`Chức năng "Sử dụng Niche này" cho "${niche.niche_name.translated}" sẽ được phát triển trong các phiên bản sau.`);
-    };
+const NicheCard: React.FC<NicheCardProps> = ({ niche, onDevelop, analysisDepth, onToggleSave, isSaved, onUseNiche, isGeneratingContent }) => {
 
     return (
         <div className="bg-gray-800/50 border border-gray-700 rounded-2xl shadow-lg p-6 w-full text-left transition-all duration-300 hover:border-teal-500 hover:shadow-teal-500/10 flex flex-col">
@@ -144,22 +140,37 @@ const NicheCard: React.FC<NicheCardProps> = ({ niche, onDevelop, showUseThisNich
                     <SaveIcon />
                     <span>{isSaved ? 'Đã lưu' : 'Lưu kết quả'}</span>
                 </button>
-                {showUseThisNicheButton && (
+                
+                {analysisDepth === 1 && (
                      <button
-                        onClick={handleUseNiche}
-                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 transition-all duration-300 transform hover:scale-105"
+                        onClick={() => onDevelop(niche.niche_name.original)}
+                        disabled={isGeneratingContent}
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        <CheckCircleIcon />
-                        <span>Sử dụng Niche này</span>
+                        <ChevronDoubleRightIcon />
+                        <span>Phát triển thêm ý tưởng</span>
                     </button>
                 )}
-                 <button
-                    onClick={() => onDevelop(niche.niche_name.original)}
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-gray-700 text-gray-300 font-semibold rounded-lg hover:bg-gray-600 hover:text-white transition-all duration-300"
-                >
-                    <ChevronDoubleRightIcon />
-                    <span>Phát triển thêm ý tưởng</span>
-                </button>
+
+                {analysisDepth >= 1 && (
+                     <button
+                        onClick={() => onUseNiche(niche)}
+                        disabled={isGeneratingContent}
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {isGeneratingContent ? (
+                            <>
+                                <div className="w-5 h-5 border-2 border-t-white border-green-800 rounded-full animate-spin"></div>
+                                <span>Đang tạo...</span>
+                            </>
+                        ) : (
+                             <>
+                                <CheckCircleIcon />
+                                <span>Sử dụng Niche này</span>
+                            </>
+                        )}
+                    </button>
+                )}
             </div>
         </div>
     );

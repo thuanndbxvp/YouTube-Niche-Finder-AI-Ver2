@@ -1,6 +1,6 @@
 // Fix: Implement Gemini API service functions.
 import { GoogleGenAI, Type, Content } from "@google/genai";
-import type { AnalysisResult, ChatMessage, FilterLevel } from '../types';
+import type { AnalysisResult, ChatMessage, FilterLevel, Niche, ContentPlanResult } from '../types';
 
 /**
  * Creates a GoogleGenAI instance with a specific API key.
@@ -266,6 +266,106 @@ export const getTrainingResponse = async (
         return response.text;
     };
 
+    const { result, successfulKeyIndex } = await executeWithRetry(apiKeys, action);
+    return { result, successfulKeyIndex };
+};
+
+const contentPlanResponseSchema = {
+    type: Type.OBJECT,
+    properties: {
+        content_ideas: {
+            type: Type.ARRAY,
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    title: {
+                        type: Type.OBJECT,
+                        properties: {
+                            original: { type: Type.STRING },
+                            translated: { type: Type.STRING }
+                        },
+                        required: ["original", "translated"]
+                    },
+                    hook: { type: Type.STRING, description: "An engaging opening hook (1-2 sentences) for the video. In VIETNAMESE." },
+                    main_points: { 
+                        type: Type.ARRAY, 
+                        items: { type: Type.STRING },
+                        description: "A list of 3-5 key talking points or scenes for the video. In VIETNAMESE."
+                    },
+                    call_to_action: { type: Type.STRING, description: "A suggested call to action for the end of the video. In VIETNAMESE." },
+                    visual_suggestions: { type: Type.STRING, description: "Suggestions for b-roll, graphics, or on-screen text. In VIETNAMESE." }
+                },
+                required: ["title", "hook", "main_points", "call_to_action", "visual_suggestions"]
+            }
+        }
+    },
+    required: ["content_ideas"]
+};
+
+const contentPlanSystemInstruction = (nicheName: string, nicheDescription: string) => {
+    return `You are an expert YouTube Content Strategist and Scriptwriter. Your task is to generate 3 highly detailed and engaging video content plans for the given niche.
+The user will provide you with a niche name and description.
+IMPORTANT: All explanatory text (hook, main_points, call_to_action, visual_suggestions) MUST be in VIETNAMESE.
+
+For each of the 3 content plans, you MUST provide all the fields in the specified JSON structure.
+
+- Niche context:
+  - Name: ${nicheName}
+  - Description: ${nicheDescription}
+
+- Your output must follow this structure for each idea:
+  - title: An object with "original" (a viral, catchy title in the target market's native language) and "translated" (the Vietnamese translation).
+  - hook: A powerful, attention-grabbing opening for the video (1-2 sentences) in VIETNAMESE.
+  - main_points: An array of 3-5 bullet points outlining the core content, scenes, or talking points of the video. In VIETNAMESE.
+  - call_to_action: A clear and effective call to action for the end of the video (e.g., subscribe, comment, check out a link). In VIETNAMESE.
+  - visual_suggestions: Creative ideas for B-roll footage, on-screen graphics, animations, or filming styles to make the video more engaging. In VIETNAMESE.
+  
+Generate exactly 3 distinct and creative video plans.`;
+};
+
+
+export const generateContentPlan = async (
+  niche: Niche,
+  apiKeys: string[],
+  trainingHistory: ChatMessage[]
+): Promise<{ result: ContentPlanResult, successfulKeyIndex: number }> => {
+    const modelName = 'gemini-2.5-pro'; 
+    const userPrompt = `Dựa trên ngách sau đây, hãy tạo một kế hoạch nội dung chi tiết.\n\nTên ngách: ${niche.niche_name.original} (${niche.niche_name.translated})\nMô tả: ${niche.description}\nĐối tượng: ${niche.audience_demographics}`;
+    
+    const contents: Content[] = [
+        ...trainingHistory.map(msg => ({
+            role: msg.role,
+            parts: msg.parts.map(p => {
+                if (p.inlineData) {
+                    return { inlineData: { mimeType: p.inlineData.mimeType, data: p.inlineData.data }};
+                }
+                return { text: p.text || '' };
+            })
+        })),
+        { role: 'user', parts: [{ text: userPrompt }] }
+    ];
+
+    const action = async (ai: GoogleGenAI) => {
+        const response = await ai.models.generateContent({
+            model: modelName,
+            contents: contents,
+            config: {
+                systemInstruction: contentPlanSystemInstruction(niche.niche_name.original, niche.description),
+                responseMimeType: "application/json",
+                responseSchema: contentPlanResponseSchema
+            }
+        });
+
+        const text = response.text;
+        try {
+            const parsedResult = JSON.parse(text);
+            return parsedResult as ContentPlanResult;
+        } catch (e) {
+            console.error("Failed to parse JSON response:", text);
+            throw new Error("The response from the AI was not valid JSON.");
+        }
+    };
+    
     const { result, successfulKeyIndex } = await executeWithRetry(apiKeys, action);
     return { result, successfulKeyIndex };
 };

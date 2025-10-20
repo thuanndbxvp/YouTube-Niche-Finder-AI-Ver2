@@ -8,7 +8,7 @@ interface ActionBarProps {
 
 const ActionBar: React.FC<ActionBarProps> = ({ savedCount, onExport }) => {
     return (
-        <div className="w-full bg-gray-800/80 border border-gray-700 rounded-lg p-3 mb-6 flex items-center justify-between sticky top-4 z-20 backdrop-blur-sm">
+        <div className="w-full bg-gray-800/80 border border-gray-700 rounded-lg p-3 mb-6 flex items-center justify-between">
             <p className="text-gray-300">
                 <span className="font-bold">{savedCount}</span> ý tưởng đã được lưu vào bộ nhớ đệm.
             </p>

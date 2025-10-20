@@ -457,7 +457,7 @@ const videoIdeasResponseSchema = {
 };
 
 const videoIdeasSystemInstruction = (nicheName: string) => {
-    return `You are an expert YouTube Content Strategist. Your task is to generate 5-10 creative and engaging video ideas for the provided niche.
+    return `You are an expert YouTube Content Strategist. Your task is to generate 5 creative and engaging video ideas for the provided niche.
 The niche is defined by its name, which is in the target market's language (likely English).
 Base your video ideas solely on this original niche name.
 
@@ -469,7 +469,7 @@ IMPORTANT: For your output, follow these rules:
 - Niche context to focus on:
   - Name: ${nicheName}
   
-Generate exactly 10 distinct and creative video ideas.`;
+Generate exactly 5 distinct and creative video ideas.`;
 };
 
 export const generateVideoIdeasForNiche = async (
@@ -479,7 +479,7 @@ export const generateVideoIdeasForNiche = async (
 ): Promise<{ result: { video_ideas: VideoIdea[] }, successfulKeyIndex: number }> => {
     const modelName = 'gemini-2.5-flash';
     // This prompt is now direct and in English to match the context of the niche name.
-    const userPrompt = `Please generate 10 video ideas for the YouTube niche: "${niche.niche_name.original}".`;
+    const userPrompt = `Please generate 5 video ideas for the YouTube niche: "${niche.niche_name.original}".`;
     
     const contents: Content[] = [
         ...trainingHistory.map(msg => ({

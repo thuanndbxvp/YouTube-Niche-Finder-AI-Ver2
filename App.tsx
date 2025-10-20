@@ -6,7 +6,7 @@ import ResultsDisplay from './components/ResultsDisplay';
 import Loader from './components/Loader';
 import ApiKeyModal from './components/ApiKeyModal';
 import TrainAiModal from './components/TrainAiModal';
-import { KeyIcon, BrainIcon } from './components/icons/Icons';
+import { BrainIcon } from './components/icons/Icons';
 import InitialSuggestions from './components/InitialSuggestions';
 import ActionBar from './components/ActionBar';
 import { exportNichesToCsv } from './utils/export';
@@ -90,6 +90,7 @@ const App: React.FC = () => {
   const [generatingContentForNiche, setGeneratingContentForNiche] = useState<string | null>(null);
   const [contentPlanCache, setContentPlanCache] = useState<Record<string, ContentPlanResult>>({});
   const [activeNicheForContentPlan, setActiveNicheForContentPlan] = useState<Niche | null>(null);
+  const [isContentPlanLoadingMore, setIsContentPlanLoadingMore] = useState<boolean>(false);
 
 
   useEffect(() => {
@@ -268,7 +269,7 @@ rồi chúng ta có thể dùng cái tex này sửa đổi lại nội dung cho 
   
     try {
       const options = {
-        countToGenerate: isLoadMore ? 5 : 10,
+        countToGenerate: 5,
         existingNichesToAvoid: (isLoadMore && analysisResult) ? analysisResult.niches.map(n => n.niche_name.original) : [],
         filters: {
             interest: interestLevel,
@@ -339,6 +340,53 @@ rồi chúng ta có thể dùng cái tex này sửa đổi lại nội dung cho 
         setActiveApiKeyIndex(null);
     } finally {
         setGeneratingContentForNiche(null);
+    }
+  };
+  
+  const handleLoadMoreContentPlan = async () => {
+    if (!activeNicheForContentPlan || !contentPlan) return;
+
+    const hasValidKey = apiKeyStatuses.includes('valid');
+    if (apiKeys.length === 0 || !hasValidKey) {
+      showNoApiKeyError();
+      return;
+    }
+
+    setIsContentPlanLoadingMore(true);
+    setError(null);
+
+    try {
+      const existingIdeas = contentPlan.content_ideas.map(idea => idea.title.original);
+      const options = {
+          countToGenerate: 5,
+          existingIdeasToAvoid: existingIdeas,
+      };
+
+      const { result: newContent, successfulKeyIndex } = await generateContentPlan(
+        activeNicheForContentPlan,
+        apiKeys,
+        trainingChatHistory,
+        options
+      );
+
+      setActiveApiKeyIndex(successfulKeyIndex);
+      
+      const updatedContentPlan = {
+          content_ideas: [...contentPlan.content_ideas, ...newContent.content_ideas]
+      };
+
+      setContentPlan(updatedContentPlan);
+      setContentPlanCache(prevCache => ({
+        ...prevCache,
+        [activeNicheForContentPlan.niche_name.original]: updatedContentPlan
+      }));
+
+    } catch (err: any) {
+      console.error(err);
+      setError({ title: 'Không thể tạo thêm kế hoạch', body: `Lỗi: ${err.message || 'Vui lòng thử lại.'}` });
+      setActiveApiKeyIndex(null);
+    } finally {
+      setIsContentPlanLoadingMore(false);
     }
   };
 
@@ -442,11 +490,10 @@ rồi chúng ta có thể dùng cái tex này sửa đổi lại nội dung cho 
                     setPasswordModalMode('login');
                     setIsPasswordModalOpen(true);
                 }}
-                className="flex items-center space-x-2 px-3 py-2 bg-gray-800/80 border border-gray-700 rounded-md text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                className="px-4 py-2 bg-gray-800/80 border border-gray-700 rounded-md text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
                 aria-label="Train AI Tool"
             >
-                <BrainIcon />
-                <span>Train AI Tool</span>
+                Train AI Tool
             </button>
         </div>
       </header>
@@ -560,6 +607,8 @@ rồi chúng ta có thể dùng cái tex này sửa đổi lại nội dung cho 
         onClose={() => setIsContentPlanModalOpen(false)}
         contentPlan={contentPlan}
         activeNiche={activeNicheForContentPlan}
+        onLoadMore={handleLoadMoreContentPlan}
+        isLoadingMore={isContentPlanLoadingMore}
       />
       <ErrorModal
         isOpen={!!error}

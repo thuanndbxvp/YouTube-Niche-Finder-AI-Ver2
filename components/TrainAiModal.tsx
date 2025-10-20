@@ -85,11 +85,10 @@ const TrainAiModal: React.FC<TrainAiModalProps> = ({ isOpen, onClose, chatHistor
             </div>
             <button
                 onClick={onChangePassword}
-                className="flex items-center space-x-2 px-3 py-1.5 border border-gray-600 rounded-md text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                className="px-3 py-1.5 border border-gray-600 rounded-md text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
                 aria-label="Đổi mật khẩu"
             >
-                <KeyIcon />
-                <span>Đổi mật khẩu</span>
+                Đổi mật khẩu
             </button>
         </header>
 

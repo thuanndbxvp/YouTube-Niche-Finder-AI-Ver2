@@ -1,6 +1,6 @@
 import React from 'react';
 import type { ContentPlanResult, Niche } from '../types';
-import { DocumentTextIcon, XIcon, SparklesIcon, LightBulbIcon, DownloadIcon } from './icons/Icons';
+import { DocumentTextIcon, XIcon, SparklesIcon, LightBulbIcon, DownloadIcon, PlusCircleIcon } from './icons/Icons';
 import { exportContentPlanToTxt } from '../utils/export';
 
 interface ContentPlanModalProps {
@@ -8,9 +8,11 @@ interface ContentPlanModalProps {
   onClose: () => void;
   contentPlan: ContentPlanResult | null;
   activeNiche: Niche | null;
+  onLoadMore: () => void;
+  isLoadingMore: boolean;
 }
 
-const ContentPlanModal: React.FC<ContentPlanModalProps> = ({ isOpen, onClose, contentPlan, activeNiche }) => {
+const ContentPlanModal: React.FC<ContentPlanModalProps> = ({ isOpen, onClose, contentPlan, activeNiche, onLoadMore, isLoadingMore }) => {
   if (!isOpen || !contentPlan) return null;
 
   const handleDownload = () => {
@@ -82,14 +84,31 @@ const ContentPlanModal: React.FC<ContentPlanModalProps> = ({ isOpen, onClose, co
           ))}
         </div>
          <footer className="p-4 border-t border-gray-700 flex justify-end items-center gap-4">
-             <button
+            <button
+                onClick={onLoadMore}
+                disabled={isLoadingMore}
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-600 text-gray-200 rounded-md text-sm hover:bg-gray-500 hover:text-white font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+                {isLoadingMore ? (
+                    <>
+                        <div className="w-4 h-4 border-2 border-t-teal-400 border-gray-500 rounded-full animate-spin"></div>
+                        <span>Đang tải...</span>
+                    </>
+                ) : (
+                    <>
+                        <PlusCircleIcon />
+                        <span>Tải thêm 5 ý tưởng</span>
+                    </>
+                )}
+            </button>
+            <button
                 onClick={handleDownload}
                 className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-gray-200 rounded-md text-sm hover:bg-gray-500 hover:text-white font-semibold transition-colors"
-             >
+            >
                 <DownloadIcon/>
                 <span>Tải về (.txt)</span>
-             </button>
-             <button
+            </button>
+            <button
                 onClick={onClose}
                 className="px-4 py-2 bg-teal-600 rounded-md text-sm text-white hover:bg-teal-700 transition-colors font-semibold"
             >

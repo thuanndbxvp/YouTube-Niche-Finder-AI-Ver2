@@ -302,12 +302,12 @@ const contentPlanResponseSchema = {
     required: ["content_ideas"]
 };
 
-const contentPlanSystemInstruction = (nicheName: string, nicheDescription: string) => {
-    return `You are an expert YouTube Content Strategist and Scriptwriter. Your task is to generate 3 highly detailed and engaging video content plans for the given niche.
+const contentPlanSystemInstruction = (nicheName: string, nicheDescription: string, countToGenerate: number, existingIdeasToAvoid: string[]) => {
+    let instruction = `You are an expert YouTube Content Strategist and Scriptwriter. Your task is to generate ${countToGenerate} highly detailed and engaging video content plans for the given niche.
 The user will provide you with a niche name and description.
 IMPORTANT: All explanatory text (hook, main_points, call_to_action, visual_suggestions) MUST be in VIETNAMESE.
 
-For each of the 3 content plans, you MUST provide all the fields in the specified JSON structure.
+For each of the ${countToGenerate} content plans, you MUST provide all the fields in the specified JSON structure.
 
 - Niche context:
   - Name: ${nicheName}
@@ -320,15 +320,27 @@ For each of the 3 content plans, you MUST provide all the fields in the specifie
   - call_to_action: A clear and effective call to action for the end of the video (e.g., subscribe, comment, check out a link). In VIETNAMESE.
   - visual_suggestions: Creative ideas for B-roll footage, on-screen graphics, animations, or filming styles to make the video more engaging. In VIETNAMESE.
   
-Generate exactly 3 distinct and creative video plans.`;
+Generate exactly ${countToGenerate} distinct and creative video plans.`;
+    
+    if (existingIdeasToAvoid.length > 0) {
+        instruction += `\n\nIMPORTANT: You have already suggested the following video ideas. DO NOT suggest them again or anything too similar. Be creative and find new angles. Ideas to avoid: ${existingIdeasToAvoid.join(', ')}.`;
+    }
+
+    return instruction;
 };
 
+interface ContentPlanOptions {
+  existingIdeasToAvoid?: string[];
+  countToGenerate?: number;
+}
 
 export const generateContentPlan = async (
   niche: Niche,
   apiKeys: string[],
-  trainingHistory: ChatMessage[]
+  trainingHistory: ChatMessage[],
+  options: ContentPlanOptions = {}
 ): Promise<{ result: ContentPlanResult, successfulKeyIndex: number }> => {
+    const { existingIdeasToAvoid = [], countToGenerate = 5 } = options;
     const modelName = 'gemini-2.5-pro'; 
     const userPrompt = `Dựa trên ngách sau đây, hãy tạo một kế hoạch nội dung chi tiết.\n\nTên ngách: ${niche.niche_name.original} (${niche.niche_name.translated})\nMô tả: ${niche.description}\nĐối tượng: ${niche.audience_demographics}`;
     
@@ -350,7 +362,7 @@ export const generateContentPlan = async (
             model: modelName,
             contents: contents,
             config: {
-                systemInstruction: contentPlanSystemInstruction(niche.niche_name.original, niche.description),
+                systemInstruction: contentPlanSystemInstruction(niche.niche_name.original, niche.description, countToGenerate, existingIdeasToAvoid),
                 responseMimeType: "application/json",
                 responseSchema: contentPlanResponseSchema
             }

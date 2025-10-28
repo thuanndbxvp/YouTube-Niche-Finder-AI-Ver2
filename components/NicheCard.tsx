@@ -2,6 +2,7 @@
 // Fix: Implement the NicheCard component to display analysis results.
 import React from 'react';
 import type { Niche } from '../types';
+import { themes } from '../App';
 import {
   DollarSignIcon,
   UserGroupIcon,
@@ -31,6 +32,7 @@ interface NicheCardProps {
   isGeneratingIdeas: boolean;
   onExportVideoIdeas: (niche: Niche) => void;
   isDirectAnalysis: boolean;
+  theme: string;
 }
 
 interface AnalysisMetricProps {
@@ -75,13 +77,14 @@ const AnalysisMetric: React.FC<AnalysisMetricProps> = ({ icon, label, score, exp
 };
 
 
-const NicheCard: React.FC<NicheCardProps> = ({ niche, index, onDevelop, analysisDepth, onToggleSave, isSaved, onUseNiche, onViewPlan, isGeneratingContent, hasContentPlan, onGenerateVideoIdeas, isGeneratingIdeas, onExportVideoIdeas, isDirectAnalysis }) => {
+const NicheCard: React.FC<NicheCardProps> = ({ niche, index, onDevelop, analysisDepth, onToggleSave, isSaved, onUseNiche, onViewPlan, isGeneratingContent, hasContentPlan, onGenerateVideoIdeas, isGeneratingIdeas, onExportVideoIdeas, isDirectAnalysis, theme }) => {
     const hasVideoIdeas = niche.video_ideas && niche.video_ideas.length > 0;
+    const themeGradient = themes[theme]?.gradient || themes.teal.gradient;
 
     return (
         <div className={`border border-gray-700 rounded-2xl shadow-lg p-6 w-full text-left transition-all duration-300 hover:border-teal-500 hover:shadow-teal-500/10 flex flex-col ${index % 2 === 0 ? 'bg-gray-800/50' : 'bg-gray-800/80'}`}>
             <div className="flex-grow">
-                <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-teal-400 text-transparent bg-clip-text">
+                <h2 className={`text-2xl font-bold bg-gradient-to-r ${themeGradient} text-transparent bg-clip-text`}>
                   {!isDirectAnalysis && <span className="text-gray-500">{index + 1}.</span>} {niche.niche_name.original}
                 </h2>
                 <h3 className={`text-lg text-gray-400 -mt-1 mb-3 ${!isDirectAnalysis ? 'pl-8' : ''}`}>{niche.niche_name.translated}</h3>

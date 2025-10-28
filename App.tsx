@@ -8,7 +8,7 @@ import ResultsDisplay from './components/ResultsDisplay';
 import Loader from './components/Loader';
 import ApiKeyModal from './components/ApiKeyModal';
 import TrainAiModal from './components/TrainAiModal';
-import { BookmarkIcon } from './components/icons/Icons';
+import { BookmarkIcon, PaintBrushIcon } from './components/icons/Icons';
 import InitialSuggestions from './components/InitialSuggestions';
 import PasswordModal from './components/PasswordModal';
 import ContentPlanModal from './components/ContentPlanModal';
@@ -19,6 +19,14 @@ import { keyFindingTranscript, nicheKnowledgeBase, parseKnowledgeBaseForSuggesti
 import { exportNichesToCsv, exportVideoIdeasToTxt } from './utils/export';
 
 export type ApiKeyStatus = 'idle' | 'checking' | 'valid' | 'invalid';
+
+export const themes: Record<string, { name: string; gradient: string }> = {
+  teal: { name: 'Xanh Dương (Mặc định)', gradient: 'from-blue-400 to-teal-400' },
+  green: { name: 'Xanh Lá', gradient: 'from-green-400 to-emerald-500' },
+  red: { name: 'Đỏ', gradient: 'from-red-500 to-rose-500' },
+  orange: { name: 'Cam', gradient: 'from-orange-400 to-amber-500' },
+  purple: { name: 'Tím', gradient: 'from-purple-500 to-violet-500' },
+};
 
 // Helper to convert File to a part for Gemini API
 async function fileToGenerativePart(file: File): Promise<Part> {
@@ -88,6 +96,8 @@ const App: React.FC = () => {
   const [searchPlaceholder, setSearchPlaceholder] = useState<string>("ví dụ: 'Khám phá không gian', 'Dự án DIY tại nhà', 'Nấu ăn'");
   const [selectedModel, setSelectedModel] = useState<string>('gemini-2.5-pro');
   const [analysisType, setAnalysisType] = useState<'direct' | 'related'>('related');
+  const [theme, setTheme] = useState<string>('teal');
+  const [isThemeDropdownOpen, setIsThemeDropdownOpen] = useState(false);
 
   // Filters
   const [interestLevel, setInterestLevel] = useState<FilterLevel>('all');
@@ -127,6 +137,7 @@ const App: React.FC = () => {
   const [notifications, setNotifications] = useState<NotificationType[]>([]);
   
   const suggestionsRef = useRef<HTMLDivElement>(null);
+  const themeDropdownRef = useRef<HTMLDivElement>(null);
 
   // Helper function to validate keys and set statuses
   const checkAndSetAllApiKeys = async (geminiKeys: string[], openaiKeys: string[]) => {
@@ -257,7 +268,32 @@ const App: React.FC = () => {
     if (placeholderSuggestions.length === 3) {
         setSearchPlaceholder(`ví dụ: '${placeholderSuggestions[0]}', '${placeholderSuggestions[1]}', '${placeholderSuggestions[2]}'`);
     }
+
+    // Load theme
+    const savedTheme = localStorage.getItem('appTheme');
+    if (savedTheme && themes[savedTheme]) {
+      setTheme(savedTheme);
+    }
+
+     // Close dropdown when clicking outside
+    const handleClickOutside = (event: MouseEvent) => {
+      if (themeDropdownRef.current && !themeDropdownRef.current.contains(event.target as Node)) {
+        setIsThemeDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
+  
+  const handleSetTheme = (newTheme: string) => {
+    if (themes[newTheme]) {
+      setTheme(newTheme);
+      localStorage.setItem('appTheme', newTheme);
+      setIsThemeDropdownOpen(false);
+    }
+  };
   
   const markets = ['Quốc tế', 'US/Canada', 'Anh', 'Úc', 'Đức', 'Pháp', 'Việt Nam', 'Nhật', 'Hàn', 'Custom'];
 
@@ -807,26 +843,30 @@ const App: React.FC = () => {
     }
 };
 
-  const Logo: React.FC = () => (
-    <a href="/" className="flex items-center space-x-3">
-      <svg
-        className="h-10 w-10 text-youtube-red"
-        fill="currentColor"
-        viewBox="0 0 24 24"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          fillRule="evenodd"
-          clipRule="evenodd"
-          d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"
-        />
-      </svg>
-      <h1 className="text-3xl font-bold tracking-tight">
-        YouTube Niche Finder{' '}
-        <span className="bg-gradient-to-r from-blue-400 to-teal-400 text-transparent bg-clip-text">AI</span>
-      </h1>
-    </a>
-  );
+  const Logo: React.FC<{ theme: string }> = ({ theme }) => {
+    const themeGradient = themes[theme]?.gradient || themes.teal.gradient;
+    
+    return (
+        <a href="/" className="flex items-center space-x-3">
+        <svg
+            className="h-10 w-10 text-youtube-red"
+            fill="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+        >
+            <path
+            fillRule="evenodd"
+            clipRule="evenodd"
+            d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"
+            />
+        </svg>
+        <h1 className="text-3xl font-bold tracking-tight">
+            YouTube Niche Finder{' '}
+            <span className={`bg-gradient-to-r ${themeGradient} text-transparent bg-clip-text`}>AI</span>
+        </h1>
+        </a>
+    );
+  };
 
   const hasValidGeminiKey = apiKeyStatuses.includes('valid');
   const hasValidOpenAiKey = openAiApiKeyStatuses.includes('valid');
@@ -837,6 +877,29 @@ const App: React.FC = () => {
       <NotificationCenter notifications={notifications} onRemove={removeNotification} />
       <header className="absolute top-0 right-0 p-4 z-10">
         <div className="flex items-center space-x-2">
+            <div ref={themeDropdownRef} className="relative">
+                <button
+                    onClick={() => setIsThemeDropdownOpen(prev => !prev)}
+                    className="flex items-center justify-center w-10 h-10 bg-gray-800/80 border border-gray-700 rounded-md text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                    aria-label="Chọn theme"
+                >
+                    <PaintBrushIcon />
+                </button>
+                {isThemeDropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-48 bg-gray-800 border border-gray-700 rounded-md shadow-lg py-1 z-20">
+                    {Object.entries(themes).map(([key, { name, gradient }]) => (
+                        <button
+                        key={key}
+                        onClick={() => handleSetTheme(key)}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 flex items-center gap-3"
+                        >
+                        <span className={`h-4 w-4 rounded-full bg-gradient-to-r ${gradient}`}></span>
+                        <span>{name}</span>
+                        </button>
+                    ))}
+                    </div>
+                )}
+            </div>
             <button
                 onClick={() => setIsLibraryModalOpen(true)}
                 className="relative flex items-center space-x-2 px-4 py-2 bg-gray-800/80 border border-gray-700 rounded-md text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
@@ -876,7 +939,7 @@ const App: React.FC = () => {
       
       <main className="container mx-auto px-4 py-8 md:py-16">
         <div className="max-w-4xl mx-auto flex flex-col items-center text-center space-y-8">
-          <Logo />
+          <Logo theme={theme}/>
           <p className="text-base text-gray-400 max-w-2xl">
             Nhập một ý tưởng, từ khóa, hoặc đam mê. AI của chúng tôi sẽ phân tích các chiến lược thành công trên YouTube để đề xuất những ngách có tiềm năng cao và ý tưởng video viral.
           </p>
@@ -1054,6 +1117,7 @@ const App: React.FC = () => {
                   generatingVideoIdeas={generatingVideoIdeas}
                   onExportVideoIdeas={handleExportVideoIdeas}
                   isDirectAnalysis={analysisType === 'direct'}
+                  theme={theme}
                 />
             ) : (
                 !isLoading && !error && (

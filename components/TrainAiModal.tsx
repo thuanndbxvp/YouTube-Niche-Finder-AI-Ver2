@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import type { ChatMessage } from '../types';
 import { BrainIcon, PaperclipIcon, XIcon, KeyIcon } from './icons/Icons';
@@ -9,26 +10,37 @@ interface TrainAiModalProps {
   onSendMessage: (message: string, files: File[]) => void;
   isLoading: boolean;
   onChangePassword: () => void;
+  selectedModel: string;
 }
 
 const MAX_TOTAL_SIZE_MB = 4;
 
-const TrainAiModal: React.FC<TrainAiModalProps> = ({ isOpen, onClose, chatHistory, onSendMessage, isLoading, onChangePassword }) => {
+const TrainAiModal: React.FC<TrainAiModalProps> = ({ isOpen, onClose, chatHistory, onSendMessage, isLoading, onChangePassword, selectedModel }) => {
   const [input, setInput] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const isGemini = selectedModel.startsWith('gemini');
 
   useEffect(() => {
     if (isOpen) {
         setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
     }
   }, [isOpen, chatHistory]);
+  
+  // If model changes to OpenAI and there are files, clear them
+  useEffect(() => {
+    if (!isGemini) {
+        setFiles([]);
+    }
+  }, [isGemini]);
+
 
   if (!isOpen) return null;
 
   const handleSend = () => {
-    if (input.trim() || files.length > 0) {
+    if (input.trim() || (files.length > 0 && isGemini)) {
       onSendMessage(input.trim(), files);
       setInput('');
       setFiles([]);
@@ -124,7 +136,7 @@ const TrainAiModal: React.FC<TrainAiModalProps> = ({ isOpen, onClose, chatHistor
         </div>
 
         <footer className="p-4 border-t border-gray-700">
-          {files.length > 0 && (
+          {files.length > 0 && isGemini && (
             <div className="mb-2 flex flex-wrap gap-2 p-2 bg-gray-900/50 rounded-md">
               {files.map((file, index) => (
                 <div key={index} className="bg-gray-700 rounded-full px-3 py-1 text-sm text-gray-200 flex items-center gap-2">
@@ -150,9 +162,10 @@ const TrainAiModal: React.FC<TrainAiModalProps> = ({ isOpen, onClose, chatHistor
                 <input type="file" multiple ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".txt,.md,.json,.csv,.pdf,.doc,.docx,text/plain,text/markdown,application/json,text/csv,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
                 <button 
                     onClick={() => fileInputRef.current?.click()} 
-                    disabled={isLoading} 
-                    className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-md transition-colors"
+                    disabled={isLoading || !isGemini} 
+                    className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     aria-label="Attach files"
+                    title={!isGemini ? "Đính kèm tệp chỉ được hỗ trợ cho các mô hình Gemini" : "Đính kèm tệp"}
                 >
                     <PaperclipIcon />
                 </button>

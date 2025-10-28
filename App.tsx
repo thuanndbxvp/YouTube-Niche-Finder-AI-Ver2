@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { analyzeNicheIdea, getTrainingResponse, generateContentPlan, validateApiKey, developVideoIdeas, generateVideoIdeasForNiche } from './services/geminiService';
+import { analyzeNicheIdea, getTrainingResponse, generateContentPlan, validateApiKey, developVideoIdeas, generateVideoIdeasForNiche, validateOpenAiApiKey, analyzeNicheIdeaWithOpenAI, generateVideoIdeasForNicheWithOpenAI, developVideoIdeasWithOpenAI, generateContentPlanWithOpenAI, getTrainingResponseWithOpenAI } from './services/aiService';
 import type { AnalysisResult, ChatMessage, Part, Niche, FilterLevel, ContentPlanResult, Notification as NotificationType, VideoIdea } from './types';
 import SearchBar from './components/SearchBar';
 import ResultsDisplay from './components/ResultsDisplay';
@@ -85,6 +85,7 @@ const App: React.FC = () => {
   const [savedNiches, setSavedNiches] = useState<Niche[]>([]);
   const [numResults, setNumResults] = useState<string>('5');
   const [searchPlaceholder, setSearchPlaceholder] = useState<string>("ví dụ: 'Khám phá không gian', 'Dự án DIY tại nhà', 'Nấu ăn'");
+  const [selectedModel, setSelectedModel] = useState<string>('gemini-2.5-pro');
 
   // Filters
   const [interestLevel, setInterestLevel] = useState<FilterLevel>('all');
@@ -95,6 +96,9 @@ const App: React.FC = () => {
   const [apiKeys, setApiKeys] = useState<string[]>([]);
   const [apiKeyStatuses, setApiKeyStatuses] = useState<ApiKeyStatus[]>([]);
   const [activeApiKeyIndex, setActiveApiKeyIndex] = useState<number | null>(null);
+  const [openAiApiKey, setOpenAiApiKey] = useState<string>('');
+  const [openAiApiKeyStatus, setOpenAiApiKeyStatus] = useState<ApiKeyStatus>('idle');
+
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState<boolean>(false);
   const [isTrainAiModalOpen, setIsTrainAiModalOpen] = useState<boolean>(false);
   const [isLibraryModalOpen, setIsLibraryModalOpen] = useState<boolean>(false);
@@ -145,6 +149,8 @@ const App: React.FC = () => {
       try {
         const storedApiKeys = localStorage.getItem('geminiApiKeys');
         const storedStatuses = localStorage.getItem('geminiApiKeyStatuses');
+        const storedOpenAiKey = localStorage.getItem('openAiApiKey');
+        const storedOpenAiStatus = localStorage.getItem('openAiApiKeyStatus');
 
         if (storedApiKeys) {
           const parsedKeys = JSON.parse(storedApiKeys);
@@ -166,10 +172,18 @@ const App: React.FC = () => {
             setApiKeyStatuses(statuses);
           }
         }
+
+        if (storedOpenAiKey) {
+            setOpenAiApiKey(storedOpenAiKey);
+            setOpenAiApiKeyStatus((storedOpenAiStatus as ApiKeyStatus) || 'idle');
+        }
+
       } catch (e) {
         console.error("Could not parse API config from localStorage", e);
         localStorage.removeItem('geminiApiKeys');
         localStorage.removeItem('geminiApiKeyStatuses');
+        localStorage.removeItem('openAiApiKey');
+        localStorage.removeItem('openAiApiKeyStatus');
       }
     };
     
@@ -237,10 +251,20 @@ const App: React.FC = () => {
   
   const markets = ['Quốc tế', 'US/Canada', 'Anh', 'Úc', 'Đức', 'Pháp', 'Việt Nam', 'Nhật', 'Hàn', 'Custom'];
 
-  const handleSaveAndCheckApiKeys = async (newApiKeys: string[]) => {
+  const handleSaveAndCheckGeminiApiKeys = async (newApiKeys: string[]) => {
     setApiKeys(newApiKeys);
     localStorage.setItem('geminiApiKeys', JSON.stringify(newApiKeys));
     await checkAndSetApiKeys(newApiKeys);
+  };
+
+  const handleSaveAndCheckOpenAiApiKey = async (newApiKey: string) => {
+    setOpenAiApiKey(newApiKey);
+    localStorage.setItem('openAiApiKey', newApiKey);
+    setOpenAiApiKeyStatus('checking');
+    const isValid = await validateOpenAiApiKey(newApiKey);
+    const newStatus = isValid ? 'valid' : 'invalid';
+    setOpenAiApiKeyStatus(newStatus);
+    localStorage.setItem('openAiApiKeyStatus', newStatus);
   };
   
   const handleDeleteApiKey = (indexToDelete: number) => {
@@ -288,23 +312,34 @@ const App: React.FC = () => {
     setIsPasswordModalOpen(true);
   };
 
-  const showNoApiKeyError = () => {
+  const showNoApiKeyError = (provider: 'gemini' | 'openai') => {
+    const commonBody = (
+      <>
+        <p className="mb-4">Vui lòng nhập một API Key hợp lệ cho <strong>{provider === 'gemini' ? 'Google Gemini' : 'OpenAI'}</strong> bằng cách bấm vào nút "API" ở góc trên bên phải để sử dụng model này.</p>
+        <div className="text-left bg-gray-900/50 p-3 rounded-lg border border-gray-700">
+          <h4 className="font-semibold text-gray-200 mb-2">Làm thế nào để lấy API Key?</h4>
+          {provider === 'gemini' ? (
+            <ol className="list-decimal list-inside text-gray-400 text-sm space-y-1">
+              <li>Truy cập <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-teal-400 hover:underline">Google AI Studio</a>.</li>
+              <li>Đăng nhập bằng tài khoản Google của bạn.</li>
+              <li>Nhấp vào nút "Get API Key" hoặc "Create API key".</li>
+              <li>Sao chép key và dán vào công cụ của chúng tôi thông qua nút "API".</li>
+            </ol>
+          ) : (
+             <ol className="list-decimal list-inside text-gray-400 text-sm space-y-1">
+              <li>Truy cập <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-teal-400 hover:underline">OpenAI API Keys</a>.</li>
+              <li>Đăng nhập hoặc đăng ký tài khoản OpenAI.</li>
+              <li>Nhấp vào nút "Create new secret key".</li>
+              <li>Sao chép key và dán vào công cụ của chúng tôi thông qua nút "API".</li>
+            </ol>
+          )}
+        </div>
+      </>
+    );
+
     setError({
         title: 'Yêu cầu API Key',
-        body: (
-          <>
-            <p className="mb-4">Vui lòng nhập ít nhất một API Key bằng cách bấm vào nút "API" ở góc trên bên phải để sử dụng công cụ.</p>
-            <div className="text-left bg-gray-900/50 p-3 rounded-lg border border-gray-700">
-              <h4 className="font-semibold text-gray-200 mb-2">Làm thế nào để lấy API Key?</h4>
-              <ol className="list-decimal list-inside text-gray-400 text-sm space-y-1">
-                <li>Truy cập <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-teal-400 hover:underline">Google AI Studio</a>.</li>
-                <li>Đăng nhập bằng tài khoản Google của bạn.</li>
-                <li>Nhấp vào nút "Get API Key" hoặc "Create API key".</li>
-                <li>Sao chép key và dán vào công cụ của chúng tôi thông qua nút "API".</li>
-              </ol>
-            </div>
-          </>
-        ),
+        body: commonBody,
         actionText: 'Cài đặt API',
         onAction: () => {
             setError(null);
@@ -324,12 +359,23 @@ const App: React.FC = () => {
     });
   };
 
+  const onOpenAIKeyFailure = () => {
+    setOpenAiApiKeyStatus('invalid');
+    localStorage.setItem('openAiApiKeyStatus', 'invalid');
+  };
+
   const runAnalysis = async (idea: string, isNewSearch: boolean, isLoadMore: boolean = false) => {
-    const hasValidKey = apiKeyStatuses.includes('valid');
-    if (apiKeys.length === 0 || !hasValidKey) {
-      showNoApiKeyError();
+    const isGemini = selectedModel.startsWith('gemini');
+    
+    if (isGemini && (apiKeys.length === 0 || !apiKeyStatuses.includes('valid'))) {
+      showNoApiKeyError('gemini');
       return;
     }
+    if (!isGemini && openAiApiKeyStatus !== 'valid') {
+      showNoApiKeyError('openai');
+      return;
+    }
+
     if (!idea.trim()) {
       setError({ title: 'Lỗi đầu vào', body: 'Vui lòng nhập một ý tưởng ngách.' });
       return;
@@ -366,9 +412,17 @@ const App: React.FC = () => {
             sustainability: sustainabilityLevel
         }
       };
-      const { result, successfulKeyIndex } = await analyzeNicheIdea(idea, marketToAnalyze, apiKeys, trainingChatHistory, options, onKeyFailure);
 
-      setActiveApiKeyIndex(successfulKeyIndex);
+      let result: AnalysisResult;
+
+      if (isGemini) {
+        const { result: geminiResult, successfulKeyIndex } = await analyzeNicheIdea(idea, marketToAnalyze, apiKeys, trainingChatHistory, options, onKeyFailure);
+        result = geminiResult;
+        setActiveApiKeyIndex(successfulKeyIndex);
+      } else {
+        result = await analyzeNicheIdeaWithOpenAI(idea, marketToAnalyze, openAiApiKey, selectedModel, trainingChatHistory, options, onOpenAIKeyFailure);
+        setActiveApiKeyIndex(null); // No index for single OpenAI key
+      }
 
       if (isLoadMore) {
         setAnalysisResult(prev => prev ? { niches: [...prev.niches, ...result.niches] } : result);
@@ -404,9 +458,13 @@ const App: React.FC = () => {
     const nicheName = nicheToUpdate.niche_name.original;
     if (generatingVideoIdeas.has(nicheName)) return;
 
-    const hasValidKey = apiKeyStatuses.includes('valid');
-    if (apiKeys.length === 0 || !hasValidKey) {
-        showNoApiKeyError();
+    const isGemini = selectedModel.startsWith('gemini');
+    if (isGemini && (apiKeys.length === 0 || !apiKeyStatuses.includes('valid'))) {
+        showNoApiKeyError('gemini');
+        return;
+    }
+    if (!isGemini && openAiApiKeyStatus !== 'valid') {
+        showNoApiKeyError('openai');
         return;
     }
 
@@ -415,8 +473,19 @@ const App: React.FC = () => {
 
     try {
         const existingTitles = nicheToUpdate.video_ideas?.map(idea => idea.title.original) || [];
-        const { result, successfulKeyIndex } = await generateVideoIdeasForNiche(nicheToUpdate, apiKeys, trainingChatHistory, { existingIdeasToAvoid: existingTitles }, onKeyFailure);
-        setActiveApiKeyIndex(successfulKeyIndex);
+        const options = { existingIdeasToAvoid: existingTitles };
+
+        let result: { video_ideas: VideoIdea[] };
+
+        if (isGemini) {
+          const { result: geminiResult, successfulKeyIndex } = await generateVideoIdeasForNiche(nicheToUpdate, apiKeys, trainingChatHistory, options, onKeyFailure);
+          result = geminiResult;
+          setActiveApiKeyIndex(successfulKeyIndex);
+        } else {
+          result = await generateVideoIdeasForNicheWithOpenAI(nicheToUpdate, openAiApiKey, selectedModel, trainingChatHistory, options, onOpenAIKeyFailure);
+          setActiveApiKeyIndex(null);
+        }
+
 
         setAnalysisResult(prevResult => {
             if (!prevResult) return null;
@@ -452,18 +521,29 @@ const App: React.FC = () => {
     const nicheName = niche.niche_name.original;
     if (generatingNiches.has(nicheName)) return;
 
-    const hasValidKey = apiKeyStatuses.includes('valid');
-    if (apiKeys.length === 0 || !hasValidKey) {
-      showNoApiKeyError();
-      return;
+    const isGemini = selectedModel.startsWith('gemini');
+    if (isGemini && (apiKeys.length === 0 || !apiKeyStatuses.includes('valid'))) {
+        showNoApiKeyError('gemini');
+        return;
+    }
+    if (!isGemini && openAiApiKeyStatus !== 'valid') {
+        showNoApiKeyError('openai');
+        return;
     }
 
     setGeneratingNiches(prev => new Set(prev).add(nicheName));
     setError(null);
 
     try {
-        const { result, successfulKeyIndex } = await developVideoIdeas(niche, apiKeys, trainingChatHistory, onKeyFailure);
-        setActiveApiKeyIndex(successfulKeyIndex);
+        let result: ContentPlanResult;
+        if (isGemini) {
+          const { result: geminiResult, successfulKeyIndex } = await developVideoIdeas(niche, apiKeys, trainingChatHistory, onKeyFailure);
+          result = geminiResult;
+          setActiveApiKeyIndex(successfulKeyIndex);
+        } else {
+          result = await developVideoIdeasWithOpenAI(niche, openAiApiKey, selectedModel, trainingChatHistory, onOpenAIKeyFailure);
+          setActiveApiKeyIndex(null);
+        }
         
         setContentPlanCache(prevCache => ({
             ...prevCache,
@@ -505,11 +585,16 @@ const App: React.FC = () => {
   const handleLoadMoreContentPlan = async () => {
     if (!activeNicheForContentPlan || !contentPlan) return;
 
-    const hasValidKey = apiKeyStatuses.includes('valid');
-    if (apiKeys.length === 0 || !hasValidKey) {
-      showNoApiKeyError();
-      return;
+    const isGemini = selectedModel.startsWith('gemini');
+    if (isGemini && (apiKeys.length === 0 || !apiKeyStatuses.includes('valid'))) {
+        showNoApiKeyError('gemini');
+        return;
     }
+    if (!isGemini && openAiApiKeyStatus !== 'valid') {
+        showNoApiKeyError('openai');
+        return;
+    }
+
 
     setIsContentPlanLoadingMore(true);
     setError(null);
@@ -521,15 +606,20 @@ const App: React.FC = () => {
           existingIdeasToAvoid: existingIdeas,
       };
 
-      const { result: newContent, successfulKeyIndex } = await generateContentPlan(
-        activeNicheForContentPlan,
-        apiKeys,
-        trainingChatHistory,
-        options,
-        onKeyFailure
-      );
+      let newContent: ContentPlanResult;
 
-      setActiveApiKeyIndex(successfulKeyIndex);
+      if (isGemini) {
+        const { result: geminiResult, successfulKeyIndex } = await generateContentPlan(
+          activeNicheForContentPlan, apiKeys, trainingChatHistory, options, onKeyFailure
+        );
+        newContent = geminiResult;
+        setActiveApiKeyIndex(successfulKeyIndex);
+      } else {
+        newContent = await generateContentPlanWithOpenAI(
+          activeNicheForContentPlan, openAiApiKey, selectedModel, trainingChatHistory, options, onOpenAIKeyFailure
+        );
+        setActiveApiKeyIndex(null);
+      }
       
       const updatedContentPlan = {
           content_ideas: [...contentPlan.content_ideas, ...newContent.content_ideas]
@@ -610,9 +700,14 @@ const App: React.FC = () => {
   };
 
   const handleSendTrainingMessage = async (message: string, files: File[]) => {
-    const hasValidKey = apiKeyStatuses.includes('valid');
-    if (apiKeys.length === 0 || !hasValidKey) {
-        const errorMsg: ChatMessage = { role: 'model', parts: [{ text: "Lỗi: Vui lòng cấu hình API Key hợp lệ trước khi bắt đầu cuộc hội thoại."}] };
+    const isGemini = selectedModel.startsWith('gemini');
+    if (isGemini && (apiKeys.length === 0 || !apiKeyStatuses.includes('valid'))) {
+        const errorMsg: ChatMessage = { role: 'model', parts: [{ text: "Lỗi: Vui lòng cấu hình API Key hợp lệ cho Gemini trước khi bắt đầu cuộc hội thoại."}] };
+        updateTrainingHistory([...trainingChatHistory, errorMsg]);
+        return;
+    }
+     if (!isGemini && openAiApiKeyStatus !== 'valid') {
+        const errorMsg: ChatMessage = { role: 'model', parts: [{ text: "Lỗi: Vui lòng cấu hình API Key hợp lệ cho OpenAI trước khi bắt đầu cuộc hội thoại."}] };
         updateTrainingHistory([...trainingChatHistory, errorMsg]);
         return;
     }
@@ -621,16 +716,22 @@ const App: React.FC = () => {
     let combinedText = message;
 
     if (files.length > 0) {
-        const fileNames = files.map(f => `- ${f.name}`).join('\n');
-        combinedText += `\n\n--- Tệp đã tải lên ---\n${fileNames}`;
+        if (isGemini) {
+          const fileNames = files.map(f => `- ${f.name}`).join('\n');
+          combinedText += `\n\n--- Tệp đã tải lên ---\n${fileNames}`;
+        } else {
+          combinedText += `\n\n[OpenAI model không thể xử lý trực tiếp tệp đính kèm trong chế độ này. Nội dung tệp cần được dán vào.]`;
+        }
     }
 
     if (combinedText.trim()) {
         userMessageParts.push({ text: combinedText.trim() });
     }
 
-    const fileParts = await Promise.all(files.map(fileToGenerativePart));
-    userMessageParts.push(...fileParts);
+    if (isGemini) {
+      const fileParts = await Promise.all(files.map(fileToGenerativePart));
+      userMessageParts.push(...fileParts);
+    }
     
     if (userMessageParts.length === 0) return;
 
@@ -640,8 +741,15 @@ const App: React.FC = () => {
     setIsTrainingLoading(true);
 
     try {
-        const { result: responseText, successfulKeyIndex } = await getTrainingResponse(newHistory, apiKeys, onKeyFailure);
-        setActiveApiKeyIndex(successfulKeyIndex);
+        let responseText: string;
+        if (isGemini) {
+          const { result, successfulKeyIndex } = await getTrainingResponse(newHistory, apiKeys, onKeyFailure);
+          responseText = result;
+          setActiveApiKeyIndex(successfulKeyIndex);
+        } else {
+          responseText = await getTrainingResponseWithOpenAI(newHistory, openAiApiKey, selectedModel, onOpenAIKeyFailure);
+          setActiveApiKeyIndex(null);
+        }
         const modelMessage: ChatMessage = { role: 'model', parts: [{ text: responseText }] };
         updateTrainingHistory([...newHistory, modelMessage]);
     } catch(e: any) {
@@ -675,7 +783,9 @@ const App: React.FC = () => {
     </a>
   );
 
-  const hasValidApiKey = apiKeyStatuses.includes('valid');
+  const hasValidGeminiKey = apiKeyStatuses.includes('valid');
+  const hasValidOpenAiKey = openAiApiKeyStatus === 'valid';
+  const hasAnyValidKey = hasValidGeminiKey || hasValidOpenAiKey;
 
   return (
     <div className="min-h-screen bg-gray-900 font-sans text-gray-200">
@@ -698,7 +808,7 @@ const App: React.FC = () => {
             <button
                 onClick={() => setIsApiKeyModalOpen(true)}
                 className={`px-4 py-2 rounded-md text-sm font-semibold text-white transition-colors duration-300 border ${
-                    hasValidApiKey
+                    hasAnyValidKey
                         ? 'bg-green-600 hover:bg-green-700 border-green-500'
                         : 'bg-orange-500 hover:bg-orange-600 border-orange-400'
                 }`}
@@ -735,8 +845,28 @@ const App: React.FC = () => {
               placeholder={searchPlaceholder}
             />
             <div className="w-full text-left bg-gray-800/50 border border-gray-700 p-4 rounded-lg space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="md:col-span-1">
+                        <label htmlFor="model-select" className="block text-sm font-medium text-gray-400 mb-2">AI Model</label>
+                        <select
+                            id="model-select"
+                            value={selectedModel}
+                            onChange={(e) => setSelectedModel(e.target.value)}
+                            className="w-full p-3 bg-gray-800 border-2 border-gray-700 rounded-lg focus:ring-2 focus:ring-teal-400 focus:border-teal-400 outline-none transition-all duration-300"
+                            disabled={isLoading}
+                        >
+                            <optgroup label="Google Gemini">
+                                <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                                <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                            </optgroup>
+                            <optgroup label="OpenAI">
+                                <option value="gpt-4o">GPT-4o</option>
+                                <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                    <div className="md:col-span-1">
                         <label htmlFor="market-select" className="block text-sm font-medium text-gray-400 mb-2">Thị trường hướng đến</label>
                         <select
                             id="market-select"
@@ -748,7 +878,7 @@ const App: React.FC = () => {
                             {markets.map(m => <option key={m} value={m}>{m === 'Custom' ? 'Tùy chỉnh...' : m}</option>)}
                         </select>
                     </div>
-                    <div>
+                    <div className="md:col-span-1">
                         <label htmlFor="num-results-select" className="block text-sm font-medium text-gray-400 mb-2">Số kết quả trả về</label>
                         <select
                             id="num-results-select"
@@ -859,12 +989,15 @@ const App: React.FC = () => {
       <ApiKeyModal
         isOpen={isApiKeyModalOpen}
         onClose={() => setIsApiKeyModalOpen(false)}
-        onSaveAndCheck={handleSaveAndCheckApiKeys}
+        onSaveAndCheckGemini={handleSaveAndCheckGeminiApiKeys}
+        onSaveAndCheckOpenAI={handleSaveAndCheckOpenAiApiKey}
         onRecheck={checkAndSetApiKeys}
         onDeleteKey={handleDeleteApiKey}
         currentApiKeys={apiKeys}
         activeApiKeyIndex={activeApiKeyIndex}
         apiKeyStatuses={apiKeyStatuses}
+        currentOpenAIApiKey={openAiApiKey}
+        openAIApiKeyStatus={openAiApiKeyStatus}
       />
       <TrainAiModal
         isOpen={isTrainAiModalOpen}
@@ -873,6 +1006,7 @@ const App: React.FC = () => {
         onSendMessage={handleSendTrainingMessage}
         isLoading={isTrainingLoading}
         onChangePassword={openChangePasswordModal}
+        selectedModel={selectedModel}
       />
       <PasswordModal
         isOpen={isPasswordModalOpen}

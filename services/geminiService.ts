@@ -538,13 +538,10 @@ export const validateApiKey = async (apiKey: string): Promise<boolean> => {
     if (!apiKey.trim()) return false;
     try {
         const ai = getGenAI(apiKey);
-        // Use a simple, non-costly call to check validity.
-        // This confirms the key is authenticated and has the correct permissions.
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: 'Hello'
         });
-        // Ensure we got some kind of response text
         return !!response.text;
     } catch (error) {
         console.error(`API Key validation failed for key ending in ...${apiKey.slice(-4)}`, error);
@@ -552,59 +549,123 @@ export const validateApiKey = async (apiKey: string): Promise<boolean> => {
     }
 };
 
+const directAnalysisSystemInstruction = () => {
+    let instruction = `You are a YouTube Niche Analysis AI. Your goal is to provide a detailed, data-driven analysis of the single user-provided niche idea.
+IMPORTANT: All explanatory and descriptive text (description, demographics, explanations, strategy, etc.) MUST be in VIETNAMESE.
+
+Analyze the user's idea as a single niche. DO NOT generate sub-niches.
+Provide all the fields in the specified JSON structure. The final output must be a JSON object with a "niches" key containing an array with EXACTLY ONE element representing your analysis.
+
+- niche_name: For "original", use the user's input. For "translated", provide the Vietnamese translation.
+- description: A detailed paragraph in VIETNAMESE explaining what this specific niche is about.
+- audience_demographics: Describe the target audience for this niche in VIETNAMESE.
+- analysis: A detailed breakdown with scores from 1-100.
+    - interest_level: Score how high the search volume/interest is. Higher is better. Provide a brief VIETNAMESE explanation.
+    - monetization_potential: Score the potential for making money. Higher is better. Provide an estimated RPM range (e.g., "$1 - $5") and a VIETNAMESE explanation of monetization methods.
+    - competition_level: Score the level of competition. A LOWER score is better. Provide a VIETNAMESE explanation.
+    - sustainability: Score the long-term potential and evergreen nature of the niche. Higher is better. Provide a VIETNAMESE explanation.
+- content_strategy: Suggest a content strategy in VIETNAMESE for this specific niche.`;
+    return instruction;
+};
+
+export const analyzeKeywordDirectly = async (
+  idea: string,
+  market: string,
+  apiKeys: string[],
+  trainingHistory: ChatMessage[],
+  onKeyFailure: (index: number) => void
+): Promise<{ result: AnalysisResult, successfulKeyIndex: number }> => {
+    const modelName = 'gemini-2.5-pro';
+    const userPrompt = `Analyze this specific YouTube niche idea in detail: "${idea}". Target market: ${market}.`;
+    
+    const contents: Content[] = [
+        ...trainingHistory.map(msg => ({ role: msg.role, parts: msg.parts })),
+        { role: 'user', parts: [{ text: userPrompt }] }
+    ];
+
+    const action = async (ai: GoogleGenAI) => {
+        const response = await ai.models.generateContent({
+            model: modelName,
+            contents: contents,
+            config: {
+                systemInstruction: directAnalysisSystemInstruction(),
+                responseMimeType: "application/json",
+                responseSchema: responseSchema
+            }
+        });
+        const text = response.text;
+        try {
+            return JSON.parse(text) as AnalysisResult;
+        } catch (e) {
+            console.error("Failed to parse JSON response for direct analysis:", text);
+            throw new Error("The response from the AI was not valid JSON.");
+        }
+    };
+    
+    return await executeWithRetry(apiKeys, action, onKeyFailure);
+};
+
 
 // --- OpenAI Service ---
+const executeOpenAIWithRetry = async <T>(
+    apiKeys: string[],
+    action: (apiKey: string) => Promise<T>,
+    onKeyFailure: (index: number) => void
+): Promise<{ result: T; successfulKeyIndex: number }> => {
+    if (!apiKeys || apiKeys.length === 0) {
+        throw new Error("Vui lòng cung cấp ít nhất một OpenAI API Key.");
+    }
+    let lastError: Error | null = null;
+    for (let i = 0; i < apiKeys.length; i++) {
+        const key = apiKeys[i];
+        if (!key.trim()) continue;
+        try {
+            const result = await action(key);
+            return { result, successfulKeyIndex: i };
+        } catch (err) {
+            console.error(`OpenAI API Key bắt đầu bằng "${key.substring(0, 4)}..." đã thất bại. Đang thử key tiếp theo.`, err);
+            onKeyFailure(i);
+            lastError = err as Error;
+        }
+    }
+    throw new Error(`Tất cả OpenAI API key đều thất bại. Lỗi cuối cùng: ${lastError?.message || 'Không có key hợp lệ.'}`);
+}
 
-const callOpenAI = async (apiKey: string, model: string, messages: {role: string, content: string}[], jsonSchema: object, onKeyFailure: () => void) => {
+const callOpenAI = async (apiKey: string, model: string, messages: {role: string, content: string}[], jsonSchema?: object) => {
     if (!apiKey || !apiKey.trim()) {
         throw new Error("Vui lòng cung cấp OpenAI API Key.");
     }
-
-    const systemMessage = messages.find(m => m.role === 'system');
-    if (systemMessage) {
-        systemMessage.content += `\n\nALWAYS respond with a JSON object that strictly adheres to the following schema. Do not include any text, markdown, or explanation outside of the single JSON object. JSON Schema:\n${JSON.stringify(jsonSchema, null, 2)}`;
+    
+    const body: any = { model, messages };
+    if (jsonSchema) {
+        const systemMessage = messages.find(m => m.role === 'system');
+        if (systemMessage) {
+            systemMessage.content += `\n\nALWAYS respond with a JSON object that strictly adheres to the following schema. Do not include any text, markdown, or explanation outside of the single JSON object. JSON Schema:\n${JSON.stringify(jsonSchema, null, 2)}`;
+        }
+        body.response_format = { type: "json_object" };
     }
     
-    try {
-        const response = await fetch("https://api.openai.com/v1/chat/completions", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${apiKey}`
-            },
-            body: JSON.stringify({
-                model: model,
-                messages: messages,
-                response_format: { type: "json_object" }
-            })
-        });
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify(body)
+    });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            onKeyFailure();
-            throw new Error(`Lỗi OpenAI API: ${errorData.error.message} (Status: ${response.status})`);
-        }
-
-        const data = await response.json();
-        const text = data.choices[0].message.content;
-        return JSON.parse(text);
-    } catch (e: any) {
-        if (e.name !== 'AbortError') { // Don't trigger failure on deliberate cancellation
-            onKeyFailure();
-        }
-        console.error("Lỗi khi gọi OpenAI hoặc phân tích JSON:", e);
-        // Re-throw a more user-friendly error
-        if (e instanceof SyntaxError) {
-             throw new Error("Phản hồi từ OpenAI không phải là JSON hợp lệ.");
-        }
-        throw e;
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Lỗi OpenAI API: ${errorData.error.message} (Status: ${response.status})`);
     }
+
+    const data = await response.json();
+    return data.choices[0].message.content;
 };
+
 
 const convertToOpenAIMessages = (history: ChatMessage[], systemInstruction: string, userPrompt: string): {role: string, content: string}[] => {
     const messages = history.map(msg => {
-        // OpenAI doesn't support multi-part messages with text and images in the same way for standard chat models.
-        // We will only take the text parts for OpenAI.
         const content = msg.parts.filter(p => p.text).map(p => p.text).join('\n');
         return {
             role: msg.role === 'model' ? 'assistant' : 'user',
@@ -614,7 +675,7 @@ const convertToOpenAIMessages = (history: ChatMessage[], systemInstruction: stri
 
     return [
         { role: 'system', content: systemInstruction },
-        ...messages.filter(m => m.content.trim()), // filter out empty messages
+        ...messages.filter(m => m.content.trim()), 
         { role: 'user', content: userPrompt }
     ];
 };
@@ -622,125 +683,94 @@ const convertToOpenAIMessages = (history: ChatMessage[], systemInstruction: stri
 export const analyzeNicheIdeaWithOpenAI = async (
   idea: string,
   market: string,
-  apiKey: string,
+  apiKeys: string[],
   model: string,
   trainingHistory: ChatMessage[],
   options: AnalysisOptions = {},
-  onKeyFailure: () => void
-): Promise<AnalysisResult> => {
+  onKeyFailure: (index: number) => void
+): Promise<{ result: AnalysisResult, successfulKeyIndex: number }> => {
     const { existingNichesToAvoid = [], countToGenerate = 10, filters = {} } = options;
     const systemInstruction = analysisSystemInstruction(countToGenerate, existingNichesToAvoid, filters);
     const userPrompt = `Analyze the YouTube niche idea: "${idea}". Target market: ${market}.`;
-    
     const messages = convertToOpenAIMessages(trainingHistory, systemInstruction, userPrompt);
     
-    const parsedResult = await callOpenAI(apiKey, model, messages, responseSchema.properties, onKeyFailure);
+    const action = async (key: string) => JSON.parse(await callOpenAI(key, model, messages, responseSchema.properties));
+    const { result, successfulKeyIndex } = await executeOpenAIWithRetry(apiKeys, action, onKeyFailure);
 
-    if (!parsedResult.niches) {
-        return { niches: [] };
+    if (!result.niches) {
+        return { result: { niches: [] }, successfulKeyIndex };
     }
-    return parsedResult as AnalysisResult;
+    return { result: result as AnalysisResult, successfulKeyIndex };
 };
 
 export const generateVideoIdeasForNicheWithOpenAI = async (
     niche: Niche,
-    apiKey: string,
+    apiKeys: string[],
     model: string,
     trainingHistory: ChatMessage[],
     options: { existingIdeasToAvoid?: string[] } = {},
-    onKeyFailure: () => void
-): Promise<{ video_ideas: VideoIdea[] }> => {
+    onKeyFailure: (index: number) => void
+): Promise<{ result: { video_ideas: VideoIdea[] }, successfulKeyIndex: number }> => {
     const { existingIdeasToAvoid = [] } = options;
     const userPrompt = `Please generate 5 video ideas for the YouTube niche: "${niche.niche_name.original}".`;
     const systemInstruction = videoIdeasSystemInstruction(niche.niche_name.original, existingIdeasToAvoid);
-    
     const messages = convertToOpenAIMessages(trainingHistory, systemInstruction, userPrompt);
     
-    const result = await callOpenAI(apiKey, model, messages, videoIdeasResponseSchema.properties, onKeyFailure);
-    return result as { video_ideas: VideoIdea[] };
+    const action = async (key: string) => JSON.parse(await callOpenAI(key, model, messages, videoIdeasResponseSchema.properties));
+    return await executeOpenAIWithRetry(apiKeys, action, onKeyFailure);
 };
 
 export const developVideoIdeasWithOpenAI = async (
   niche: Niche,
-  apiKey: string,
+  apiKeys: string[],
   model: string,
   trainingHistory: ChatMessage[],
-  onKeyFailure: () => void
-): Promise<ContentPlanResult> => {
+  onKeyFailure: (index: number) => void
+): Promise<{ result: ContentPlanResult, successfulKeyIndex: number }> => {
     const ideasToDevelop = (niche.video_ideas || []).map(idea => 
         `- Title (Original): ${idea.title.original}\n  Title (Translated): ${idea.title.translated}\n  Draft Content: ${idea.draft_content}`
     ).join('\n\n');
     const userPrompt = `Dựa trên ngách sau đây và danh sách ý tưởng phác thảo này, hãy phát triển chúng thành kế hoạch nội dung chi tiết. Chỉ phát triển các ý tưởng được cung cấp, không tạo ý tưởng mới.\n\n**Ngách:** ${niche.niche_name.original}\n\n**Các ý tưởng cần phát triển:**\n${ideasToDevelop}`;
     const systemInstruction = developIdeasSystemInstruction(niche.niche_name.original, niche.description);
-
     const messages = convertToOpenAIMessages(trainingHistory, systemInstruction, userPrompt);
 
-    const result = await callOpenAI(apiKey, model, messages, contentPlanResponseSchema.properties, onKeyFailure);
-    return result as ContentPlanResult;
+    const action = async (key: string) => JSON.parse(await callOpenAI(key, model, messages, contentPlanResponseSchema.properties));
+    return await executeOpenAIWithRetry(apiKeys, action, onKeyFailure);
 };
-
 
 export const generateContentPlanWithOpenAI = async (
   niche: Niche,
-  apiKey: string,
+  apiKeys: string[],
   model: string,
   trainingHistory: ChatMessage[],
   options: ContentPlanOptions = {},
-  onKeyFailure: () => void
-): Promise<ContentPlanResult> => {
+  onKeyFailure: (index: number) => void
+): Promise<{ result: ContentPlanResult, successfulKeyIndex: number }> => {
     const { existingIdeasToAvoid = [], countToGenerate = 5 } = options;
     const userPrompt = `Dựa trên ngách sau đây, hãy tạo một kế hoạch nội dung chi tiết.\n\nTên ngách: ${niche.niche_name.original} (${niche.niche_name.translated})\nMô tả: ${niche.description}\nĐối tượng: ${niche.audience_demographics}`;
     const systemInstruction = contentPlanSystemInstruction(niche.niche_name.original, niche.description, countToGenerate, existingIdeasToAvoid);
-    
     const messages = convertToOpenAIMessages(trainingHistory, systemInstruction, userPrompt);
 
-    const result = await callOpenAI(apiKey, model, messages, contentPlanResponseSchema.properties, onKeyFailure);
-    return result as ContentPlanResult;
+    const action = async (key: string) => JSON.parse(await callOpenAI(key, model, messages, contentPlanResponseSchema.properties));
+    return await executeOpenAIWithRetry(apiKeys, action, onKeyFailure);
 };
 
 
 export const getTrainingResponseWithOpenAI = async (
     history: ChatMessage[],
-    apiKey: string,
+    apiKeys: string[],
     model: string,
-    onKeyFailure: () => void
-): Promise<string> => {
+    onKeyFailure: (index: number) => void
+): Promise<{ result: string, successfulKeyIndex: number }> => {
     const systemInstruction = `You are a helpful AI assistant for a YouTube Niche Finder tool. The user is providing you with training data or asking questions about your capabilities. Respond conversationally and helpfully. Acknowledge that you have learned the information provided.`;
     
-    // Convert all but the last message for history, then add the last message as the new user prompt
     const historyWithoutLast = history.slice(0, -1);
     const lastMessage = history[history.length - 1];
     const userPrompt = lastMessage.parts.filter(p => p.text).map(p => p.text).join('\n\n');
-    
     const messages = convertToOpenAIMessages(historyWithoutLast, systemInstruction, userPrompt);
 
-    try {
-        const response = await fetch("https://api.openai.com/v1/chat/completions", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${apiKey}`
-            },
-            body: JSON.stringify({
-                model: model,
-                messages: messages,
-            })
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            onKeyFailure();
-            throw new Error(`Lỗi OpenAI API: ${errorData.error.message} (Status: ${response.status})`);
-        }
-
-        const data = await response.json();
-        return data.choices[0].message.content;
-
-    } catch (e: any) {
-        onKeyFailure();
-        console.error("Lỗi khi gọi OpenAI:", e);
-        throw e;
-    }
+    const action = (key: string) => callOpenAI(key, model, messages);
+    return await executeOpenAIWithRetry(apiKeys, action, onKeyFailure);
 };
 
 
@@ -758,4 +788,20 @@ export const validateOpenAiApiKey = async (apiKey: string): Promise<boolean> => 
         console.error(`OpenAI API Key validation failed for key ending in ...${apiKey.slice(-4)}`, error);
         return false;
     }
+};
+
+export const analyzeKeywordDirectlyWithOpenAI = async (
+  idea: string,
+  market: string,
+  apiKeys: string[],
+  model: string,
+  trainingHistory: ChatMessage[],
+  onKeyFailure: (index: number) => void
+): Promise<{ result: AnalysisResult, successfulKeyIndex: number }> => {
+    const systemInstruction = directAnalysisSystemInstruction();
+    const userPrompt = `Analyze this specific YouTube niche idea in detail: "${idea}". Target market: ${market}.`;
+    const messages = convertToOpenAIMessages(trainingHistory, systemInstruction, userPrompt);
+
+    const action = async (key: string) => JSON.parse(await callOpenAI(key, model, messages, responseSchema.properties));
+    return await executeOpenAIWithRetry(apiKeys, action, onKeyFailure);
 };

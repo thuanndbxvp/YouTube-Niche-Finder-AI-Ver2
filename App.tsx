@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { analyzeNicheIdea, getTrainingResponse, generateContentPlan, validateApiKey, developVideoIdeas, generateVideoIdeasForNiche, validateOpenAiApiKey, analyzeNicheIdeaWithOpenAI, generateVideoIdeasForNicheWithOpenAI, developVideoIdeasWithOpenAI, generateContentPlanWithOpenAI, getTrainingResponseWithOpenAI } from './services/aiService';
+// Fix: Import `getTrainingResponseWithOpenAI` to resolve reference error.
+import { analyzeNicheIdea, getTrainingResponse, generateContentPlan, validateApiKey, developVideoIdeas, generateVideoIdeasForNiche, validateOpenAiApiKey, analyzeNicheIdeaWithOpenAI, generateVideoIdeasForNicheWithOpenAI, developVideoIdeasWithOpenAI, generateContentPlanWithOpenAI, analyzeKeywordDirectly, analyzeKeywordDirectlyWithOpenAI, getTrainingResponseWithOpenAI } from './services/geminiService';
 import type { AnalysisResult, ChatMessage, Part, Niche, FilterLevel, ContentPlanResult, Notification as NotificationType, VideoIdea } from './types';
 import SearchBar from './components/SearchBar';
 import ResultsDisplay from './components/ResultsDisplay';
@@ -86,6 +87,7 @@ const App: React.FC = () => {
   const [numResults, setNumResults] = useState<string>('5');
   const [searchPlaceholder, setSearchPlaceholder] = useState<string>("ví dụ: 'Khám phá không gian', 'Dự án DIY tại nhà', 'Nấu ăn'");
   const [selectedModel, setSelectedModel] = useState<string>('gemini-2.5-pro');
+  const [analysisType, setAnalysisType] = useState<'direct' | 'related'>('related');
 
   // Filters
   const [interestLevel, setInterestLevel] = useState<FilterLevel>('all');
@@ -96,8 +98,10 @@ const App: React.FC = () => {
   const [apiKeys, setApiKeys] = useState<string[]>([]);
   const [apiKeyStatuses, setApiKeyStatuses] = useState<ApiKeyStatus[]>([]);
   const [activeApiKeyIndex, setActiveApiKeyIndex] = useState<number | null>(null);
-  const [openAiApiKey, setOpenAiApiKey] = useState<string>('');
-  const [openAiApiKeyStatus, setOpenAiApiKeyStatus] = useState<ApiKeyStatus>('idle');
+  
+  const [openAiApiKeys, setOpenAiApiKeys] = useState<string[]>([]);
+  const [openAiApiKeyStatuses, setOpenAiApiKeyStatuses] = useState<ApiKeyStatus[]>([]);
+  const [activeOpenAiApiKeyIndex, setActiveOpenAiApiKeyIndex] = useState<number | null>(null);
 
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState<boolean>(false);
   const [isTrainAiModalOpen, setIsTrainAiModalOpen] = useState<boolean>(false);
@@ -125,21 +129,32 @@ const App: React.FC = () => {
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
   // Helper function to validate keys and set statuses
-  const checkAndSetApiKeys = async (keysToCheck: string[]) => {
-    if (keysToCheck.length === 0) {
+  const checkAndSetAllApiKeys = async (geminiKeys: string[], openaiKeys: string[]) => {
+      // Gemini
+      if (geminiKeys.length > 0) {
+        setApiKeyStatuses(geminiKeys.map(() => 'checking'));
+        const geminiValidationPromises = geminiKeys.map(key => validateApiKey(key));
+        const geminiResults = await Promise.all(geminiValidationPromises);
+        const geminiFinalStatuses = geminiResults.map(isValid => (isValid ? 'valid' : 'invalid'));
+        setApiKeyStatuses(geminiFinalStatuses);
+        localStorage.setItem('geminiApiKeyStatuses', JSON.stringify(geminiFinalStatuses));
+      } else {
         setApiKeyStatuses([]);
         localStorage.setItem('geminiApiKeyStatuses', JSON.stringify([]));
-        return;
-    }
-    
-    setApiKeyStatuses(keysToCheck.map(() => 'checking'));
-    
-    const validationPromises = keysToCheck.map(key => validateApiKey(key));
-    const results = await Promise.all(validationPromises);
-    
-    const finalStatuses = results.map(isValid => (isValid ? 'valid' : 'invalid'));
-    setApiKeyStatuses(finalStatuses);
-    localStorage.setItem('geminiApiKeyStatuses', JSON.stringify(finalStatuses));
+      }
+      
+      // OpenAI
+      if (openaiKeys.length > 0) {
+        setOpenAiApiKeyStatuses(openaiKeys.map(() => 'checking'));
+        const openaiValidationPromises = openaiKeys.map(key => validateOpenAiApiKey(key));
+        const openaiResults = await Promise.all(openaiValidationPromises);
+        const openaiFinalStatuses = openaiResults.map(isValid => (isValid ? 'valid' : 'invalid'));
+        setOpenAiApiKeyStatuses(openaiFinalStatuses);
+        localStorage.setItem('openAiApiKeyStatuses', JSON.stringify(openaiFinalStatuses));
+      } else {
+        setOpenAiApiKeyStatuses([]);
+        localStorage.setItem('openAiApiKeyStatuses', JSON.stringify([]));
+      }
   };
 
 
@@ -147,43 +162,38 @@ const App: React.FC = () => {
     // Load API keys and their statuses from localStorage on initial load
     const loadApiConfig = () => {
       try {
+        // Gemini
         const storedApiKeys = localStorage.getItem('geminiApiKeys');
         const storedStatuses = localStorage.getItem('geminiApiKeyStatuses');
-        const storedOpenAiKey = localStorage.getItem('openAiApiKey');
-        const storedOpenAiStatus = localStorage.getItem('openAiApiKeyStatus');
-
         if (storedApiKeys) {
           const parsedKeys = JSON.parse(storedApiKeys);
-          if (Array.isArray(parsedKeys)) {
-            setApiKeys(parsedKeys);
-
-            let statuses: ApiKeyStatus[] = [];
-            if (storedStatuses) {
-              const parsedStatuses = JSON.parse(storedStatuses);
-              if (Array.isArray(parsedStatuses) && parsedStatuses.length === parsedKeys.length) {
-                statuses = parsedStatuses;
-              }
-            }
-            
-            if (statuses.length !== parsedKeys.length) {
-              statuses = parsedKeys.map(() => 'idle');
-              localStorage.setItem('geminiApiKeyStatuses', JSON.stringify(statuses));
-            }
-            setApiKeyStatuses(statuses);
+          setApiKeys(parsedKeys);
+          if (storedStatuses) {
+            setApiKeyStatuses(JSON.parse(storedStatuses));
+          } else {
+            setApiKeyStatuses(parsedKeys.map(() => 'idle'));
           }
         }
-
-        if (storedOpenAiKey) {
-            setOpenAiApiKey(storedOpenAiKey);
-            setOpenAiApiKeyStatus((storedOpenAiStatus as ApiKeyStatus) || 'idle');
+        
+        // OpenAI
+        const storedOpenAiKeys = localStorage.getItem('openAiApiKeys');
+        const storedOpenAiStatuses = localStorage.getItem('openAiApiKeyStatuses');
+        if (storedOpenAiKeys) {
+          const parsedKeys = JSON.parse(storedOpenAiKeys);
+          setOpenAiApiKeys(parsedKeys);
+          if (storedOpenAiStatuses) {
+            setOpenAiApiKeyStatuses(JSON.parse(storedOpenAiStatuses));
+          } else {
+            setOpenAiApiKeyStatuses(parsedKeys.map(() => 'idle'));
+          }
         }
 
       } catch (e) {
         console.error("Could not parse API config from localStorage", e);
         localStorage.removeItem('geminiApiKeys');
         localStorage.removeItem('geminiApiKeyStatuses');
-        localStorage.removeItem('openAiApiKey');
-        localStorage.removeItem('openAiApiKeyStatus');
+        localStorage.removeItem('openAiApiKeys');
+        localStorage.removeItem('openAiApiKeyStatuses');
       }
     };
     
@@ -254,35 +264,35 @@ const App: React.FC = () => {
   const handleSaveAndCheckGeminiApiKeys = async (newApiKeys: string[]) => {
     setApiKeys(newApiKeys);
     localStorage.setItem('geminiApiKeys', JSON.stringify(newApiKeys));
-    await checkAndSetApiKeys(newApiKeys);
+    await checkAndSetAllApiKeys(newApiKeys, openAiApiKeys);
   };
 
-  const handleSaveAndCheckOpenAiApiKey = async (newApiKey: string) => {
-    setOpenAiApiKey(newApiKey);
-    localStorage.setItem('openAiApiKey', newApiKey);
-    setOpenAiApiKeyStatus('checking');
-    const isValid = await validateOpenAiApiKey(newApiKey);
-    const newStatus = isValid ? 'valid' : 'invalid';
-    setOpenAiApiKeyStatus(newStatus);
-    localStorage.setItem('openAiApiKeyStatus', newStatus);
+  const handleSaveAndCheckOpenAiApiKeys = async (newApiKeys: string[]) => {
+    setOpenAiApiKeys(newApiKeys);
+    localStorage.setItem('openAiApiKeys', JSON.stringify(newApiKeys));
+    await checkAndSetAllApiKeys(apiKeys, newApiKeys);
   };
   
   const handleDeleteApiKey = (indexToDelete: number) => {
     const newKeys = apiKeys.filter((_, i) => i !== indexToDelete);
     const newStatuses = apiKeyStatuses.filter((_, i) => i !== indexToDelete);
-    
     setApiKeys(newKeys);
     setApiKeyStatuses(newStatuses);
     localStorage.setItem('geminiApiKeys', JSON.stringify(newKeys));
     localStorage.setItem('geminiApiKeyStatuses', JSON.stringify(newStatuses));
+    if (activeApiKeyIndex === indexToDelete) setActiveApiKeyIndex(null);
+    else if (activeApiKeyIndex !== null && indexToDelete < activeApiKeyIndex) setActiveApiKeyIndex(p => p === null ? null : p - 1);
+  };
 
-
-    // Adjust active key index if necessary
-    if (activeApiKeyIndex === indexToDelete) {
-        setActiveApiKeyIndex(null);
-    } else if (activeApiKeyIndex !== null && indexToDelete < activeApiKeyIndex) {
-        setActiveApiKeyIndex(prev => (prev !== null ? prev - 1 : null));
-    }
+  const handleDeleteOpenAiApiKey = (indexToDelete: number) => {
+    const newKeys = openAiApiKeys.filter((_, i) => i !== indexToDelete);
+    const newStatuses = openAiApiKeyStatuses.filter((_, i) => i !== indexToDelete);
+    setOpenAiApiKeys(newKeys);
+    setOpenAiApiKeyStatuses(newStatuses);
+    localStorage.setItem('openAiApiKeys', JSON.stringify(newKeys));
+    localStorage.setItem('openAiApiKeyStatuses', JSON.stringify(newStatuses));
+    if (activeOpenAiApiKeyIndex === indexToDelete) setActiveOpenAiApiKeyIndex(null);
+    else if (activeOpenAiApiKeyIndex !== null && indexToDelete < activeOpenAiApiKeyIndex) setActiveOpenAiApiKeyIndex(p => p === null ? null : p - 1);
   };
 
 
@@ -302,7 +312,6 @@ const App: React.FC = () => {
     } else if (newPassword) {
       setTrainingPassword(newPassword);
       localStorage.setItem('trainingPassword', newPassword);
-      // Optionally, give user feedback that password was changed
     }
   };
   
@@ -359,9 +368,15 @@ const App: React.FC = () => {
     });
   };
 
-  const onOpenAIKeyFailure = () => {
-    setOpenAiApiKeyStatus('invalid');
-    localStorage.setItem('openAiApiKeyStatus', 'invalid');
+  const onOpenAIKeyFailure = (index: number) => {
+    setOpenAiApiKeyStatuses(prev => {
+        const newStatuses = [...prev];
+        if (newStatuses[index] !== 'invalid') {
+            newStatuses[index] = 'invalid';
+            localStorage.setItem('openAiApiKeyStatuses', JSON.stringify(newStatuses));
+        }
+        return newStatuses;
+    });
   };
 
   const runAnalysis = async (idea: string, isNewSearch: boolean, isLoadMore: boolean = false) => {
@@ -371,7 +386,7 @@ const App: React.FC = () => {
       showNoApiKeyError('gemini');
       return;
     }
-    if (!isGemini && openAiApiKeyStatus !== 'valid') {
+    if (!isGemini && (openAiApiKeys.length === 0 || !openAiApiKeyStatuses.includes('valid'))) {
       showNoApiKeyError('openai');
       return;
     }
@@ -402,28 +417,42 @@ const App: React.FC = () => {
     const countToGenerate = parseInt(numResults, 10);
   
     try {
-      const options = {
-        countToGenerate,
-        existingNichesToAvoid: (isLoadMore && analysisResult) ? analysisResult.niches.map(n => n.niche_name.original) : [],
-        filters: {
-            interest: interestLevel,
-            monetization: monetizationLevel,
-            competition: competitionLevel,
-            sustainability: sustainabilityLevel
-        }
-      };
-
       let result: AnalysisResult;
+      let successfulKeyIndex: number;
+      const activeProvider: 'gemini' | 'openai' = isGemini ? 'gemini' : 'openai';
 
-      if (isGemini) {
-        const { result: geminiResult, successfulKeyIndex } = await analyzeNicheIdea(idea, marketToAnalyze, apiKeys, trainingChatHistory, options, onKeyFailure);
-        result = geminiResult;
-        setActiveApiKeyIndex(successfulKeyIndex);
-      } else {
-        result = await analyzeNicheIdeaWithOpenAI(idea, marketToAnalyze, openAiApiKey, selectedModel, trainingChatHistory, options, onOpenAIKeyFailure);
-        setActiveApiKeyIndex(null); // No index for single OpenAI key
+      if (analysisType === 'direct' && !isLoadMore) {
+        if (isGemini) {
+          ({ result, successfulKeyIndex } = await analyzeKeywordDirectly(idea, marketToAnalyze, apiKeys, trainingChatHistory, onKeyFailure));
+        } else {
+          ({ result, successfulKeyIndex } = await analyzeKeywordDirectlyWithOpenAI(idea, marketToAnalyze, openAiApiKeys, selectedModel, trainingChatHistory, onOpenAIKeyFailure));
+        }
+      } else { // 'related' analysis or load more
+        const options = {
+            countToGenerate,
+            existingNichesToAvoid: (isLoadMore && analysisResult) ? analysisResult.niches.map(n => n.niche_name.original) : [],
+            filters: {
+                interest: interestLevel,
+                monetization: monetizationLevel,
+                competition: competitionLevel,
+                sustainability: sustainabilityLevel
+            }
+        };
+        if (isGemini) {
+            ({ result, successfulKeyIndex } = await analyzeNicheIdea(idea, marketToAnalyze, apiKeys, trainingChatHistory, options, onKeyFailure));
+        } else {
+            ({ result, successfulKeyIndex } = await analyzeNicheIdeaWithOpenAI(idea, marketToAnalyze, openAiApiKeys, selectedModel, trainingChatHistory, options, onOpenAIKeyFailure));
+        }
       }
 
+      if (activeProvider === 'gemini') {
+          setActiveApiKeyIndex(successfulKeyIndex);
+          setActiveOpenAiApiKeyIndex(null);
+      } else {
+          setActiveOpenAiApiKeyIndex(successfulKeyIndex);
+          setActiveApiKeyIndex(null);
+      }
+      
       if (isLoadMore) {
         setAnalysisResult(prev => prev ? { niches: [...prev.niches, ...result.niches] } : result);
       } else {
@@ -436,6 +465,7 @@ const App: React.FC = () => {
       console.error(err);
       setError({ title: 'Không thể phân tích', body: `Lỗi: ${err.message || 'Vui lòng kiểm tra lại API Keys và thử lại.'}` });
       setActiveApiKeyIndex(null);
+      setActiveOpenAiApiKeyIndex(null);
     } finally {
       setIsLoading(false);
       setIsLoadingMore(false);
@@ -463,7 +493,7 @@ const App: React.FC = () => {
         showNoApiKeyError('gemini');
         return;
     }
-    if (!isGemini && openAiApiKeyStatus !== 'valid') {
+    if (!isGemini && (openAiApiKeys.length === 0 || !openAiApiKeyStatuses.includes('valid'))) {
         showNoApiKeyError('openai');
         return;
     }
@@ -476,13 +506,15 @@ const App: React.FC = () => {
         const options = { existingIdeasToAvoid: existingTitles };
 
         let result: { video_ideas: VideoIdea[] };
+        let successfulKeyIndex: number;
 
         if (isGemini) {
-          const { result: geminiResult, successfulKeyIndex } = await generateVideoIdeasForNiche(nicheToUpdate, apiKeys, trainingChatHistory, options, onKeyFailure);
-          result = geminiResult;
+          ({ result, successfulKeyIndex } = await generateVideoIdeasForNiche(nicheToUpdate, apiKeys, trainingChatHistory, options, onKeyFailure));
           setActiveApiKeyIndex(successfulKeyIndex);
+          setActiveOpenAiApiKeyIndex(null);
         } else {
-          result = await generateVideoIdeasForNicheWithOpenAI(nicheToUpdate, openAiApiKey, selectedModel, trainingChatHistory, options, onOpenAIKeyFailure);
+          ({ result, successfulKeyIndex } = await generateVideoIdeasForNicheWithOpenAI(nicheToUpdate, openAiApiKeys, selectedModel, trainingChatHistory, options, onOpenAIKeyFailure));
+          setActiveOpenAiApiKeyIndex(successfulKeyIndex);
           setActiveApiKeyIndex(null);
         }
 
@@ -508,6 +540,7 @@ const App: React.FC = () => {
             type: 'error'
         }]);
         setActiveApiKeyIndex(null);
+        setActiveOpenAiApiKeyIndex(null);
     } finally {
         setGeneratingVideoIdeas(prev => {
             const newSet = new Set(prev);
@@ -526,7 +559,7 @@ const App: React.FC = () => {
         showNoApiKeyError('gemini');
         return;
     }
-    if (!isGemini && openAiApiKeyStatus !== 'valid') {
+    if (!isGemini && (openAiApiKeys.length === 0 || !openAiApiKeyStatuses.includes('valid'))) {
         showNoApiKeyError('openai');
         return;
     }
@@ -536,12 +569,14 @@ const App: React.FC = () => {
 
     try {
         let result: ContentPlanResult;
+        let successfulKeyIndex: number;
         if (isGemini) {
-          const { result: geminiResult, successfulKeyIndex } = await developVideoIdeas(niche, apiKeys, trainingChatHistory, onKeyFailure);
-          result = geminiResult;
+          ({ result, successfulKeyIndex } = await developVideoIdeas(niche, apiKeys, trainingChatHistory, onKeyFailure));
           setActiveApiKeyIndex(successfulKeyIndex);
+          setActiveOpenAiApiKeyIndex(null);
         } else {
-          result = await developVideoIdeasWithOpenAI(niche, openAiApiKey, selectedModel, trainingChatHistory, onOpenAIKeyFailure);
+          ({ result, successfulKeyIndex } = await developVideoIdeasWithOpenAI(niche, openAiApiKeys, selectedModel, trainingChatHistory, onOpenAIKeyFailure));
+          setActiveOpenAiApiKeyIndex(successfulKeyIndex);
           setActiveApiKeyIndex(null);
         }
         
@@ -564,6 +599,7 @@ const App: React.FC = () => {
             type: 'error'
         }]);
         setActiveApiKeyIndex(null);
+        setActiveOpenAiApiKeyIndex(null);
     } finally {
         setGeneratingNiches(prev => {
             const newSet = new Set(prev);
@@ -590,7 +626,7 @@ const App: React.FC = () => {
         showNoApiKeyError('gemini');
         return;
     }
-    if (!isGemini && openAiApiKeyStatus !== 'valid') {
+    if (!isGemini && (openAiApiKeys.length === 0 || !openAiApiKeyStatuses.includes('valid'))) {
         showNoApiKeyError('openai');
         return;
     }
@@ -607,17 +643,19 @@ const App: React.FC = () => {
       };
 
       let newContent: ContentPlanResult;
+      let successfulKeyIndex: number;
 
       if (isGemini) {
-        const { result: geminiResult, successfulKeyIndex } = await generateContentPlan(
+        ({ result: newContent, successfulKeyIndex } = await generateContentPlan(
           activeNicheForContentPlan, apiKeys, trainingChatHistory, options, onKeyFailure
-        );
-        newContent = geminiResult;
+        ));
         setActiveApiKeyIndex(successfulKeyIndex);
+        setActiveOpenAiApiKeyIndex(null);
       } else {
-        newContent = await generateContentPlanWithOpenAI(
-          activeNicheForContentPlan, openAiApiKey, selectedModel, trainingChatHistory, options, onOpenAIKeyFailure
-        );
+        ({ result: newContent, successfulKeyIndex } = await generateContentPlanWithOpenAI(
+          activeNicheForContentPlan, openAiApiKeys, selectedModel, trainingChatHistory, options, onOpenAIKeyFailure
+        ));
+        setActiveOpenAiApiKeyIndex(successfulKeyIndex);
         setActiveApiKeyIndex(null);
       }
       
@@ -640,7 +678,6 @@ const App: React.FC = () => {
                   // Convert detailed content ideas to simple video ideas
                   const newVideoIdeasFromPlan: VideoIdea[] = newContent.content_ideas.map(detailedIdea => ({
                       title: detailedIdea.title,
-                      // The hook is a good summary for the draft content.
                       draft_content: detailedIdea.hook, 
                   }));
 
@@ -660,6 +697,7 @@ const App: React.FC = () => {
       console.error(err);
       setError({ title: 'Không thể tạo thêm kế hoạch', body: `Lỗi: ${err.message || 'Vui lòng thử lại.'}` });
       setActiveApiKeyIndex(null);
+      setActiveOpenAiApiKeyIndex(null);
     } finally {
       setIsContentPlanLoadingMore(false);
     }
@@ -706,7 +744,7 @@ const App: React.FC = () => {
         updateTrainingHistory([...trainingChatHistory, errorMsg]);
         return;
     }
-     if (!isGemini && openAiApiKeyStatus !== 'valid') {
+     if (!isGemini && (openAiApiKeys.length === 0 || !openAiApiKeyStatuses.includes('valid'))) {
         const errorMsg: ChatMessage = { role: 'model', parts: [{ text: "Lỗi: Vui lòng cấu hình API Key hợp lệ cho OpenAI trước khi bắt đầu cuộc hội thoại."}] };
         updateTrainingHistory([...trainingChatHistory, errorMsg]);
         return;
@@ -742,12 +780,14 @@ const App: React.FC = () => {
 
     try {
         let responseText: string;
+        let successfulKeyIndex: number;
         if (isGemini) {
-          const { result, successfulKeyIndex } = await getTrainingResponse(newHistory, apiKeys, onKeyFailure);
-          responseText = result;
+          ({ result: responseText, successfulKeyIndex } = await getTrainingResponse(newHistory, apiKeys, onKeyFailure));
           setActiveApiKeyIndex(successfulKeyIndex);
+          setActiveOpenAiApiKeyIndex(null);
         } else {
-          responseText = await getTrainingResponseWithOpenAI(newHistory, openAiApiKey, selectedModel, onOpenAIKeyFailure);
+          ({ result: responseText, successfulKeyIndex } = await getTrainingResponseWithOpenAI(newHistory, openAiApiKeys, selectedModel, onOpenAIKeyFailure));
+          setActiveOpenAiApiKeyIndex(successfulKeyIndex);
           setActiveApiKeyIndex(null);
         }
         const modelMessage: ChatMessage = { role: 'model', parts: [{ text: responseText }] };
@@ -757,6 +797,7 @@ const App: React.FC = () => {
         const errorMsg: ChatMessage = { role: 'model', parts: [{ text: `Đã có lỗi xảy ra khi giao tiếp với AI. Lỗi: ${e.message}`}] };
         updateTrainingHistory([...trainingChatHistory, userMessage, errorMsg]);
         setActiveApiKeyIndex(null);
+        setActiveOpenAiApiKeyIndex(null);
     } finally {
         setIsTrainingLoading(false);
     }
@@ -784,7 +825,7 @@ const App: React.FC = () => {
   );
 
   const hasValidGeminiKey = apiKeyStatuses.includes('valid');
-  const hasValidOpenAiKey = openAiApiKeyStatus === 'valid';
+  const hasValidOpenAiKey = openAiApiKeyStatuses.includes('valid');
   const hasAnyValidKey = hasValidGeminiKey || hasValidOpenAiKey;
 
   return (
@@ -836,7 +877,7 @@ const App: React.FC = () => {
             Nhập một ý tưởng, từ khóa, hoặc đam mê. AI của chúng tôi sẽ phân tích các chiến lược thành công trên YouTube để đề xuất những ngách có tiềm năng cao và ý tưởng video viral.
           </p>
 
-          <div className="w-full max-w-2xl space-y-6">
+          <div className="w-full max-w-2xl space-y-4">
             <SearchBar
               userInput={userInput}
               setUserInput={setUserInput}
@@ -844,6 +885,37 @@ const App: React.FC = () => {
               isLoading={isLoading}
               placeholder={searchPlaceholder}
             />
+            <div className="w-full max-w-2xl text-left">
+                <div className="flex items-center justify-center gap-6 bg-gray-800/50 border border-gray-700 p-3 rounded-lg">
+                    <span className="text-sm font-medium text-gray-400">Loại phân tích:</span>
+                    <div className="flex items-center gap-4">
+                        <label className="flex items-center space-x-2 cursor-pointer text-gray-300">
+                            <input
+                                type="radio"
+                                name="analysisType"
+                                value="related"
+                                checked={analysisType === 'related'}
+                                onChange={() => setAnalysisType('related')}
+                                className="form-radio h-4 w-4 text-teal-500 bg-gray-700 border-gray-600 focus:ring-teal-500"
+                                disabled={isLoading}
+                            />
+                            <span>Tìm chủ đề liên quan</span>
+                        </label>
+                        <label className="flex items-center space-x-2 cursor-pointer text-gray-300">
+                            <input
+                                type="radio"
+                                name="analysisType"
+                                value="direct"
+                                checked={analysisType === 'direct'}
+                                onChange={() => setAnalysisType('direct')}
+                                className="form-radio h-4 w-4 text-teal-500 bg-gray-700 border-gray-600 focus:ring-teal-500"
+                                disabled={isLoading}
+                            />
+                            <span>Phân tích key này</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
             <div className="w-full text-left bg-gray-800/50 border border-gray-700 p-4 rounded-lg space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="md:col-span-1">
@@ -885,7 +957,7 @@ const App: React.FC = () => {
                             value={numResults}
                             onChange={(e) => setNumResults(e.target.value)}
                             className="w-full p-3 bg-gray-800 border-2 border-gray-700 rounded-lg focus:ring-2 focus:ring-teal-400 focus:border-teal-400 outline-none transition-all duration-300"
-                            disabled={isLoading}
+                            disabled={isLoading || analysisType === 'direct'}
                         >
                             <option value="5">5</option>
                             <option value="10">10</option>
@@ -911,28 +983,28 @@ const App: React.FC = () => {
                         label="Mức độ quan tâm" 
                         value={interestLevel} 
                         onChange={setInterestLevel} 
-                        disabled={isLoading}
+                        disabled={isLoading || analysisType === 'direct'}
                         tooltipText="Lọc các ngách dựa trên mức độ quan tâm và khối lượng tìm kiếm của khán giả. 'Cao' có nghĩa là rất phổ biến."
                     />
                     <FilterDropdown 
                         label="Tiềm năng kiếm tiền" 
                         value={monetizationLevel} 
                         onChange={setMonetizationLevel} 
-                        disabled={isLoading}
+                        disabled={isLoading || analysisType === 'direct'}
                         tooltipText="Lọc các ngách dựa trên khả năng kiếm tiền (quảng cáo, affiliate, v.v.). 'Cao' có nghĩa là RPM ước tính cao hơn."
                     />
                     <FilterDropdown 
                         label="Mức độ cạnh tranh" 
                         value={competitionLevel} 
                         onChange={setCompetitionLevel} 
-                        disabled={isLoading}
+                        disabled={isLoading || analysisType === 'direct'}
                         tooltipText="Lọc các ngách dựa trên mức độ cạnh tranh. 'Thấp' có nghĩa là ít cạnh tranh hơn, dễ dàng hơn để nổi bật."
                     />
                     <FilterDropdown 
                         label="Tính bền vững" 
                         value={sustainabilityLevel} 
                         onChange={setSustainabilityLevel} 
-                        disabled={isLoading}
+                        disabled={isLoading || analysisType === 'direct'}
                         tooltipText="Lọc các ngách dựa trên tiềm năng lâu dài và khả năng tạo nội dung bền vững. 'Cao' có nghĩa là ngách có tính evergreen."
                     />
                 </div>
@@ -976,6 +1048,7 @@ const App: React.FC = () => {
                   numResults={numResults}
                   onGenerateVideoIdeas={handleGenerateVideoIdeas}
                   generatingVideoIdeas={generatingVideoIdeas}
+                  isDirectAnalysis={analysisType === 'direct'}
                 />
             ) : (
                 !isLoading && !error && (
@@ -990,14 +1063,16 @@ const App: React.FC = () => {
         isOpen={isApiKeyModalOpen}
         onClose={() => setIsApiKeyModalOpen(false)}
         onSaveAndCheckGemini={handleSaveAndCheckGeminiApiKeys}
-        onSaveAndCheckOpenAI={handleSaveAndCheckOpenAiApiKey}
-        onRecheck={checkAndSetApiKeys}
+        onSaveAndCheckOpenAI={handleSaveAndCheckOpenAiApiKeys}
+        onRecheckAll={() => checkAndSetAllApiKeys(apiKeys, openAiApiKeys)}
         onDeleteKey={handleDeleteApiKey}
+        onDeleteOpenAiKey={handleDeleteOpenAiApiKey}
         currentApiKeys={apiKeys}
         activeApiKeyIndex={activeApiKeyIndex}
         apiKeyStatuses={apiKeyStatuses}
-        currentOpenAIApiKey={openAiApiKey}
-        openAIApiKeyStatus={openAiApiKeyStatus}
+        currentOpenAIApiKeys={openAiApiKeys}
+        openAIApiKeyStatuses={openAiApiKeyStatuses}
+        activeOpenAIApiKeyIndex={activeOpenAiApiKeyIndex}
       />
       <TrainAiModal
         isOpen={isTrainAiModalOpen}

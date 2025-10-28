@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { ChatMessage } from '../types';
 import { BrainIcon, PaperclipIcon, XIcon, KeyIcon } from './icons/Icons';
+import { themes } from '../theme';
 
 interface TrainAiModalProps {
   isOpen: boolean;
@@ -11,16 +12,18 @@ interface TrainAiModalProps {
   isLoading: boolean;
   onChangePassword: () => void;
   selectedModel: string;
+  theme: string;
 }
 
 const MAX_TOTAL_SIZE_MB = 4;
 
-const TrainAiModal: React.FC<TrainAiModalProps> = ({ isOpen, onClose, chatHistory, onSendMessage, isLoading, onChangePassword, selectedModel }) => {
+const TrainAiModal: React.FC<TrainAiModalProps> = ({ isOpen, onClose, chatHistory, onSendMessage, isLoading, onChangePassword, selectedModel, theme }) => {
   const [input, setInput] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
+  const themeGradient = themes[theme]?.gradient || themes.teal.gradient;
   const isGemini = selectedModel.startsWith('gemini');
 
   useEffect(() => {
@@ -91,7 +94,7 @@ const TrainAiModal: React.FC<TrainAiModalProps> = ({ isOpen, onClose, chatHistor
                     <BrainIcon />
                 </div>
                 <div>
-                    <h2 className="text-xl font-bold">Train AI Tool</h2>
+                    <h2 className={`text-xl font-bold bg-gradient-to-r ${themeGradient} text-transparent bg-clip-text`}>Train AI Tool</h2>
                     <p className="text-sm text-gray-400">Dạy cho AI kiến thức mới. Những gì bạn cung cấp ở đây sẽ được ghi nhớ cho các lần phân tích sau.</p>
                 </div>
             </div>

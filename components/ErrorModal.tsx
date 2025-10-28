@@ -1,6 +1,7 @@
 // Fix: Implement a reusable error modal component.
 import React from 'react';
 import { ExclamationTriangleIcon } from './icons/Icons';
+import { themes } from '../theme';
 
 interface ErrorModalProps {
   isOpen: boolean;
@@ -9,10 +10,13 @@ interface ErrorModalProps {
   children: React.ReactNode;
   actionText?: string;
   onAction?: () => void;
+  theme: string;
 }
 
-const ErrorModal: React.FC<ErrorModalProps> = ({ isOpen, onClose, title, children, actionText, onAction }) => {
+const ErrorModal: React.FC<ErrorModalProps> = ({ isOpen, onClose, title, children, actionText, onAction, theme }) => {
   if (!isOpen) return null;
+  
+  const themeGradient = themes[theme]?.gradient || themes.teal.gradient;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4" onClick={onClose}>
@@ -22,7 +26,7 @@ const ErrorModal: React.FC<ErrorModalProps> = ({ isOpen, onClose, title, childre
             <ExclamationTriangleIcon />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-red-300">{title}</h2>
+            <h2 className={`text-xl font-bold bg-gradient-to-r ${themeGradient} text-transparent bg-clip-text`}>{title}</h2>
             <div className="text-sm text-gray-400 mt-2">{children}</div>
           </div>
         </div>

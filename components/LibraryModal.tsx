@@ -1,7 +1,9 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import type { Niche } from '../types';
 import { BookmarkIcon, XIcon, DownloadIcon, TrashIcon, GoogleIcon, CheckCircleIcon, ExclamationTriangleIcon } from './icons/Icons';
 import { generateNichesCsvContent } from '../utils/export';
+import { themes } from '../theme';
 
 // --- Google API Configuration ---
 // BƯỚC QUAN TRỌNG: Thay thế giá trị dưới đây bằng Client ID của bạn từ Google Cloud Console.
@@ -16,9 +18,10 @@ interface LibraryModalProps {
   onDeleteNiche: (nicheName: string) => void;
   onDeleteAll: () => void;
   onExport: () => void;
+  theme: string;
 }
 
-const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, savedNiches, onDeleteNiche, onDeleteAll, onExport }) => {
+const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, savedNiches, onDeleteNiche, onDeleteAll, onExport, theme }) => {
   const [gapiReady, setGapiReady] = useState(false);
   const [gisReady, setGisReady] = useState(false);
   const [tokenClient, setTokenClient] = useState<any>(null);
@@ -26,6 +29,7 @@ const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, savedNiche
   const [isUploadingToDrive, setIsUploadingToDrive] = useState(false);
   const [uploadMessage, setUploadMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
+  const themeGradient = themes[theme]?.gradient || themes.teal.gradient;
   const isGoogleDriveConfigured = CLIENT_ID && CLIENT_ID !== 'YOUR_CLIENT_ID.apps.googleusercontent.com';
 
   useEffect(() => {
@@ -208,7 +212,7 @@ const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, savedNiche
                     <BookmarkIcon />
                 </div>
                 <div>
-                    <h2 className="text-xl font-bold">Thư viện ý tưởng đã lưu</h2>
+                    <h2 className={`text-xl font-bold bg-gradient-to-r ${themeGradient} text-transparent bg-clip-text`}>Thư viện ý tưởng đã lưu</h2>
                     <p className="text-sm text-gray-400">Quản lý và xuất các ý tưởng ngách bạn đã lưu.</p>
                 </div>
             </div>
@@ -249,7 +253,7 @@ const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, savedNiche
         
         <div className="p-4 border-t border-gray-700 space-y-4">
             <div className="p-4 bg-gray-900/50 rounded-lg border border-gray-700/50">
-                <h3 className="font-semibold text-gray-200 mb-3">Đồng bộ với Google Drive</h3>
+                <h3 className={`font-semibold mb-3 bg-gradient-to-r ${themeGradient} text-transparent bg-clip-text`}>Đồng bộ với Google Drive</h3>
                 {renderGoogleDriveSection()}
                 {uploadMessage && (
                     <div className={`mt-3 p-2 rounded-md text-sm flex items-start gap-2 ${uploadMessage.type === 'success' ? 'bg-green-900/50 text-green-300' : 'bg-red-900/50 text-red-300'}`}>

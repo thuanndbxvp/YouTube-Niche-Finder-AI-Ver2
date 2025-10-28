@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import type { ApiKeyStatus } from '../App';
 import { CheckCircleIcon, XCircleIcon, TrashIcon, GoogleIcon } from './icons/Icons';
+import { themes } from '../theme';
 
 interface ApiKeyModalProps {
   isOpen: boolean;
@@ -17,6 +18,7 @@ interface ApiKeyModalProps {
   currentOpenAIApiKeys: string[];
   openAIApiKeyStatuses: ApiKeyStatus[];
   activeOpenAIApiKeyIndex: number | null;
+  theme: string;
 }
 
 const StatusIcon: React.FC<{ status: ApiKeyStatus }> = ({ status }) => {
@@ -46,11 +48,14 @@ const OpenAIIcon: React.FC = () => (
 const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ 
     isOpen, onClose, onSaveAndCheckGemini, onSaveAndCheckOpenAI, onRecheckAll, onDeleteKey, onDeleteOpenAiKey,
     currentApiKeys, activeApiKeyIndex, apiKeyStatuses,
-    currentOpenAIApiKeys, openAIApiKeyStatuses, activeOpenAIApiKeyIndex
+    currentOpenAIApiKeys, openAIApiKeyStatuses, activeOpenAIApiKeyIndex,
+    theme
 }) => {
   const [geminiKeysInput, setGeminiKeysInput] = useState('');
   const [openAiKeysInput, setOpenAiKeysInput] = useState('');
   const [isChecking, setIsChecking] = useState(false);
+  const themeGradient = themes[theme]?.gradient || themes.teal.gradient;
+
 
   useEffect(() => {
     if (isOpen) {
@@ -83,7 +88,7 @@ const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4" onClick={onClose}>
       <div className="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-3xl mx-4 flex flex-col h-[90vh]" onClick={e => e.stopPropagation()}>
-        <h2 className="text-xl font-bold mb-2">Quản lý API Keys</h2>
+        <h2 className={`text-xl font-bold mb-2 bg-gradient-to-r ${themeGradient} text-transparent bg-clip-text`}>Quản lý API Keys</h2>
         <p className="text-gray-400 mb-4 text-sm">
           Thêm hoặc chỉnh sửa API Keys cho Google Gemini và OpenAI. Hệ thống sẽ tự động thử các key hợp lệ theo thứ tự.
         </p>

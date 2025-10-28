@@ -1,5 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { LockClosedIcon, KeyIcon } from './icons/Icons';
+import { themes } from '../theme';
 
 interface PasswordModalProps {
   isOpen: boolean;
@@ -7,13 +9,16 @@ interface PasswordModalProps {
   onSuccess: (password?: string) => void;
   mode: 'login' | 'change';
   verifyPassword: (password: string) => boolean;
+  theme: string;
 }
 
-const PasswordModal: React.FC<PasswordModalProps> = ({ isOpen, onClose, onSuccess, mode, verifyPassword }) => {
+const PasswordModal: React.FC<PasswordModalProps> = ({ isOpen, onClose, onSuccess, mode, verifyPassword, theme }) => {
   const [password, setPassword] = useState('');
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [error, setError] = useState('');
+  const themeGradient = themes[theme]?.gradient || themes.teal.gradient;
+
 
   useEffect(() => {
     if (isOpen) {
@@ -64,7 +69,7 @@ const PasswordModal: React.FC<PasswordModalProps> = ({ isOpen, onClose, onSucces
                     {mode === 'login' ? <LockClosedIcon /> : <KeyIcon />}
                 </div>
                 <div>
-                    <h2 className="text-xl font-bold">{mode === 'login' ? 'Yêu cầu Mật khẩu' : 'Đổi Mật khẩu'}</h2>
+                    <h2 className={`text-xl font-bold bg-gradient-to-r ${themeGradient} text-transparent bg-clip-text`}>{mode === 'login' ? 'Yêu cầu Mật khẩu' : 'Đổi Mật khẩu'}</h2>
                     <p className="text-sm text-gray-400">
                         {mode === 'login' ? 'Vui lòng nhập mật khẩu để tiếp tục.' : 'Nhập mật khẩu cũ và mới.'}
                     </p>

@@ -17,16 +17,9 @@ import NotificationCenter from './components/NotificationCenter';
 import LibraryModal from './components/LibraryModal';
 import { keyFindingTranscript, nicheKnowledgeBase, parseKnowledgeBaseForSuggestions } from './data/knowledgeBase';
 import { exportNichesToCsv, exportVideoIdeasToTxt } from './utils/export';
+import { themes } from './theme';
 
 export type ApiKeyStatus = 'idle' | 'checking' | 'valid' | 'invalid';
-
-export const themes: Record<string, { name: string; gradient: string }> = {
-  teal: { name: 'Xanh Dương (Mặc định)', gradient: 'from-blue-400 to-teal-400' },
-  green: { name: 'Xanh Lá', gradient: 'from-green-400 to-emerald-500' },
-  red: { name: 'Đỏ', gradient: 'from-red-500 to-rose-500' },
-  orange: { name: 'Cam', gradient: 'from-orange-400 to-amber-500' },
-  purple: { name: 'Tím', gradient: 'from-purple-500 to-violet-500' },
-};
 
 // Helper to convert File to a part for Gemini API
 async function fileToGenerativePart(file: File): Promise<Part> {
@@ -1121,7 +1114,7 @@ const App: React.FC = () => {
                 />
             ) : (
                 !isLoading && !error && (
-                    <InitialSuggestions setUserInput={setUserInput} />
+                    <InitialSuggestions setUserInput={setUserInput} theme={theme} />
                 )
             )}
           </div>
@@ -1142,6 +1135,7 @@ const App: React.FC = () => {
         currentOpenAIApiKeys={openAiApiKeys}
         openAIApiKeyStatuses={openAiApiKeyStatuses}
         activeOpenAIApiKeyIndex={activeOpenAiApiKeyIndex}
+        theme={theme}
       />
       <TrainAiModal
         isOpen={isTrainAiModalOpen}
@@ -1151,6 +1145,7 @@ const App: React.FC = () => {
         isLoading={isTrainingLoading}
         onChangePassword={openChangePasswordModal}
         selectedModel={selectedModel}
+        theme={theme}
       />
       <PasswordModal
         isOpen={isPasswordModalOpen}
@@ -1158,6 +1153,7 @@ const App: React.FC = () => {
         onSuccess={handlePasswordSuccess}
         mode={passwordModalMode}
         verifyPassword={verifyTrainingPassword}
+        theme={theme}
       />
       <ContentPlanModal
         isOpen={isContentPlanModalOpen}
@@ -1166,6 +1162,7 @@ const App: React.FC = () => {
         activeNiche={activeNicheForContentPlan}
         onLoadMore={handleLoadMoreContentPlan}
         isLoadingMore={isContentPlanLoadingMore}
+        theme={theme}
       />
       <LibraryModal
         isOpen={isLibraryModalOpen}
@@ -1174,6 +1171,7 @@ const App: React.FC = () => {
         onDeleteNiche={handleDeleteSavedNiche}
         onDeleteAll={handleClearSavedNiches}
         onExport={handleExportSaved}
+        theme={theme}
       />
       <ErrorModal
         isOpen={!!error}
@@ -1181,6 +1179,7 @@ const App: React.FC = () => {
         title={error?.title || 'Đã có lỗi xảy ra'}
         actionText={error?.actionText}
         onAction={error?.onAction}
+        theme={theme}
       >
         {error?.body}
       </ErrorModal>

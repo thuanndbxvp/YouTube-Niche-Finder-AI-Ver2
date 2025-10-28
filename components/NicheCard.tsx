@@ -1,8 +1,7 @@
-
 // Fix: Implement the NicheCard component to display analysis results.
 import React from 'react';
 import type { Niche } from '../types';
-import { themes } from '../App';
+import { themes } from '../theme';
 import {
   DollarSignIcon,
   UserGroupIcon,

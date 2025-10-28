@@ -137,3 +137,38 @@ export function exportContentPlanToTxt(contentPlan: ContentPlanResult, nicheName
         document.body.removeChild(link);
     }
 }
+
+export function exportVideoIdeasToTxt(niche: Niche) {
+    if (!niche.video_ideas || niche.video_ideas.length === 0) {
+        alert("Không có ý tưởng video nào để xuất.");
+        return;
+    }
+
+    let content = `DANH SÁCH Ý TƯỞNG VIDEO\n`;
+    content += `Ngách: ${niche.niche_name.original} (${niche.niche_name.translated})\n\n`;
+    content += "========================================\n\n";
+
+    niche.video_ideas.forEach((idea, index) => {
+        content += `Ý TƯỞNG ${index + 1}\n`;
+        content += `----------------------------------------\n`;
+        content += `   > Tiêu đề (Original): ${idea.title.original}\n`;
+        content += `   > Tiêu đề (Tiếng Việt): ${idea.title.translated}\n\n`;
+        content += `   > Nội dung phác họa:\n     ${idea.draft_content.replace(/\n/g, '\n     ')}\n\n`;
+        content += "========================================\n\n";
+    });
+
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8;' });
+    const sanitizedFileName = niche.niche_name.original.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    const filename = `video_ideas_${sanitizedFileName}.txt`;
+
+    const link = document.createElement('a');
+    if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+}

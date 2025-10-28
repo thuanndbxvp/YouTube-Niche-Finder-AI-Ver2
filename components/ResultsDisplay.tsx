@@ -19,10 +19,11 @@ interface ResultsDisplayProps {
   numResults: string;
   onGenerateVideoIdeas: (niche: Niche) => void;
   generatingVideoIdeas: Set<string>;
+  onExportVideoIdeas: (niche: Niche) => void;
   isDirectAnalysis: boolean;
 }
 
-const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onDevelop, analysisDepth, onLoadMore, isLoadingMore, onToggleSave, savedNiches, onUseNiche, onViewPlan, generatingNiches, contentPlanCache, numResults, onGenerateVideoIdeas, generatingVideoIdeas, isDirectAnalysis }) => {
+const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onDevelop, analysisDepth, onLoadMore, isLoadingMore, onToggleSave, savedNiches, onUseNiche, onViewPlan, generatingNiches, contentPlanCache, numResults, onGenerateVideoIdeas, generatingVideoIdeas, onExportVideoIdeas, isDirectAnalysis }) => {
   
   const numToAdd = parseInt(numResults, 10);
 
@@ -48,6 +49,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onDevelop, anal
               hasContentPlan={hasContentPlan}
               onGenerateVideoIdeas={onGenerateVideoIdeas}
               isGeneratingIdeas={isGeneratingIdeas}
+              onExportVideoIdeas={onExportVideoIdeas}
               isDirectAnalysis={isDirectAnalysis}
             />
         );

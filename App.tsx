@@ -16,7 +16,7 @@ import ErrorModal from './components/ErrorModal';
 import NotificationCenter from './components/NotificationCenter';
 import LibraryModal from './components/LibraryModal';
 import { keyFindingTranscript, nicheKnowledgeBase, parseKnowledgeBaseForSuggestions } from './data/knowledgeBase';
-import { exportNichesToCsv } from './utils/export';
+import { exportNichesToCsv, exportVideoIdeasToTxt } from './utils/export';
 
 export type ApiKeyStatus = 'idle' | 'checking' | 'valid' | 'invalid';
 
@@ -441,7 +441,7 @@ const App: React.FC = () => {
         if (isGemini) {
             ({ result, successfulKeyIndex } = await analyzeNicheIdea(idea, marketToAnalyze, apiKeys, trainingChatHistory, options, onKeyFailure));
         } else {
-            ({ result, successfulKeyIndex } = await analyzeNicheIdeaWithOpenAI(idea, marketToAnalyze, openAiApiKeys, selectedModel, trainingChatHistory, options, onOpenAIKeyFailure));
+            ({ result, successfulKeyIndex } = await analyzeNicheIdeaWithOpenAI(idea, marketToAnalyze, openAiApiKeys, selectedModel, trainingChatHistory, options, onKeyFailure));
         }
       }
 
@@ -720,6 +720,10 @@ const App: React.FC = () => {
 
   const handleExportSaved = () => {
     exportNichesToCsv(savedNiches, `saved_niches_${new Date().toISOString().split('T')[0]}.csv`);
+  };
+
+  const handleExportVideoIdeas = (niche: Niche) => {
+    exportVideoIdeasToTxt(niche);
   };
   
   const handleClearSavedNiches = () => {
@@ -1048,6 +1052,7 @@ const App: React.FC = () => {
                   numResults={numResults}
                   onGenerateVideoIdeas={handleGenerateVideoIdeas}
                   generatingVideoIdeas={generatingVideoIdeas}
+                  onExportVideoIdeas={handleExportVideoIdeas}
                   isDirectAnalysis={analysisType === 'direct'}
                 />
             ) : (

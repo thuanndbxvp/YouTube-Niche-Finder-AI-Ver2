@@ -13,6 +13,7 @@ import {
   ChevronDoubleRightIcon,
   CheckCircleIcon,
   SaveIcon,
+  DownloadIcon,
 } from './icons/Icons';
 
 interface NicheCardProps {
@@ -28,6 +29,7 @@ interface NicheCardProps {
   hasContentPlan: boolean;
   onGenerateVideoIdeas: (niche: Niche) => void;
   isGeneratingIdeas: boolean;
+  onExportVideoIdeas: (niche: Niche) => void;
   isDirectAnalysis: boolean;
 }
 
@@ -73,7 +75,7 @@ const AnalysisMetric: React.FC<AnalysisMetricProps> = ({ icon, label, score, exp
 };
 
 
-const NicheCard: React.FC<NicheCardProps> = ({ niche, index, onDevelop, analysisDepth, onToggleSave, isSaved, onUseNiche, onViewPlan, isGeneratingContent, hasContentPlan, onGenerateVideoIdeas, isGeneratingIdeas, isDirectAnalysis }) => {
+const NicheCard: React.FC<NicheCardProps> = ({ niche, index, onDevelop, analysisDepth, onToggleSave, isSaved, onUseNiche, onViewPlan, isGeneratingContent, hasContentPlan, onGenerateVideoIdeas, isGeneratingIdeas, onExportVideoIdeas, isDirectAnalysis }) => {
     const hasVideoIdeas = niche.video_ideas && niche.video_ideas.length > 0;
 
     return (
@@ -148,8 +150,8 @@ const NicheCard: React.FC<NicheCardProps> = ({ niche, index, onDevelop, analysis
             </div>
 
             <div className="mt-6 pt-4 border-t border-gray-700/60 flex flex-col sm:flex-row items-center justify-between gap-3">
-                {/* Left-aligned button */}
-                <div>
+                {/* Left-aligned button group */}
+                <div className="flex flex-col sm:flex-row items-center justify-start gap-3 w-full sm:w-auto">
                     <button
                         onClick={() => onGenerateVideoIdeas(niche)}
                         disabled={isGeneratingIdeas}
@@ -167,6 +169,15 @@ const NicheCard: React.FC<NicheCardProps> = ({ niche, index, onDevelop, analysis
                             </>
                         )}
                     </button>
+                    {hasVideoIdeas && (
+                        <button
+                            onClick={() => onExportVideoIdeas(niche)}
+                            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-gray-600 text-gray-300 font-semibold rounded-lg hover:bg-gray-500 hover:text-white transition-all duration-300 transform hover:scale-105"
+                        >
+                            <DownloadIcon />
+                            <span>Tải về ý tưởng</span>
+                        </button>
+                    )}
                 </div>
 
                 {/* Right-aligned buttons */}

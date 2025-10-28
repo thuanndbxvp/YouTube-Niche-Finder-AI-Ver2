@@ -48,6 +48,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onDevelop, anal
               hasContentPlan={hasContentPlan}
               onGenerateVideoIdeas={onGenerateVideoIdeas}
               isGeneratingIdeas={isGeneratingIdeas}
+              isDirectAnalysis={isDirectAnalysis}
             />
         );
       })}

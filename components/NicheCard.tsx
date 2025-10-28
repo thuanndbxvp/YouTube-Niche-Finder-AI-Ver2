@@ -78,12 +78,12 @@ const AnalysisMetric: React.FC<AnalysisMetricProps> = ({ icon, label, score, exp
 
 const NicheCard: React.FC<NicheCardProps> = ({ niche, index, onDevelop, analysisDepth, onToggleSave, isSaved, onUseNiche, onViewPlan, isGeneratingContent, hasContentPlan, onGenerateVideoIdeas, isGeneratingIdeas, onExportVideoIdeas, isDirectAnalysis, theme }) => {
     const hasVideoIdeas = niche.video_ideas && niche.video_ideas.length > 0;
-    const themeGradient = themes[theme]?.gradient || themes.teal.gradient;
+    const currentTheme = themes[theme] || themes.teal;
 
     return (
-        <div className={`border border-gray-700 rounded-2xl shadow-lg p-6 w-full text-left transition-all duration-300 hover:border-teal-500 hover:shadow-teal-500/10 flex flex-col ${index % 2 === 0 ? 'bg-gray-800/50' : 'bg-gray-800/80'}`}>
+        <div className={`border border-gray-700 rounded-2xl shadow-lg p-6 w-full text-left transition-all duration-300 ${currentTheme.borderHover} hover:shadow-teal-500/10 flex flex-col ${index % 2 === 0 ? 'bg-gray-800/50' : 'bg-gray-800/80'}`}>
             <div className="flex-grow">
-                <h2 className={`text-2xl font-bold bg-gradient-to-r ${themeGradient} text-transparent bg-clip-text`}>
+                <h2 className={`text-2xl font-bold bg-gradient-to-r ${currentTheme.gradient} text-transparent bg-clip-text`}>
                   {!isDirectAnalysis && <span className="text-gray-500">{index + 1}.</span>} {niche.niche_name.original}
                 </h2>
                 <h3 className={`text-lg text-gray-400 -mt-1 mb-3 ${!isDirectAnalysis ? 'pl-8' : ''}`}>{niche.niche_name.translated}</h3>
@@ -157,7 +157,7 @@ const NicheCard: React.FC<NicheCardProps> = ({ niche, index, onDevelop, analysis
                     <button
                         onClick={() => onGenerateVideoIdeas(niche)}
                         disabled={isGeneratingIdeas}
-                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className={`w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 text-white font-semibold rounded-lg shadow-md transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed ${currentTheme.bg} ${currentTheme.bgHover}`}
                     >
                         {isGeneratingIdeas ? (
                             <>
@@ -188,7 +188,7 @@ const NicheCard: React.FC<NicheCardProps> = ({ niche, index, onDevelop, analysis
                         onClick={() => onToggleSave(niche)}
                         className={`w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 ${
                             isSaved 
-                                ? 'bg-teal-600 text-white hover:bg-teal-700' 
+                                ? `${currentTheme.bg} text-white ${currentTheme.bgHover}` 
                                 : 'bg-gray-600 text-gray-300 hover:bg-gray-500 hover:text-white'
                         }`}
                     >
@@ -200,7 +200,7 @@ const NicheCard: React.FC<NicheCardProps> = ({ niche, index, onDevelop, analysis
                         <button
                             onClick={() => onDevelop(niche.niche_name.original)}
                             disabled={isGeneratingContent}
-                            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className={`w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 text-white font-semibold rounded-lg shadow-md transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed ${currentTheme.bg} ${currentTheme.bgHover}`}
                         >
                             <ChevronDoubleRightIcon />
                             <span>Phát triển thêm ý tưởng</span>
@@ -211,9 +211,7 @@ const NicheCard: React.FC<NicheCardProps> = ({ niche, index, onDevelop, analysis
                         <button
                             onClick={() => hasContentPlan ? onViewPlan(niche) : onUseNiche(niche)}
                             disabled={isGeneratingContent}
-                            className={`w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 text-white font-semibold rounded-lg shadow-md transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed ${
-                                hasContentPlan ? 'bg-teal-600 hover:bg-teal-700' : 'bg-green-600 hover:bg-green-700'
-                            }`}
+                            className={`w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 text-white font-semibold rounded-lg shadow-md transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed ${currentTheme.bg} ${currentTheme.bgHover}`}
                         >
                             {isGeneratingContent ? (
                                 <>

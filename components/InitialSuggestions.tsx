@@ -24,7 +24,7 @@ const InitialSuggestions: React.FC<{ setUserInput: (value: string) => void; them
   }, []);
 
   const [visibleCount, setVisibleCount] = useState<number>(SUGGESTIONS_BATCH_SIZE);
-  const themeGradient = themes[theme]?.gradient || themes.teal.gradient;
+  const currentTheme = themes[theme] || themes.teal;
 
 
   const handleLoadMore = () => {
@@ -36,13 +36,13 @@ const InitialSuggestions: React.FC<{ setUserInput: (value: string) => void; them
   return (
     <div className="text-center text-gray-500 p-8 border-2 border-dashed border-gray-700 rounded-xl">
       <p className="text-xl font-medium">Kết quả phân tích ngách sẽ xuất hiện ở đây.</p>
-      <p className={`mt-4 mb-6 text-lg font-medium bg-gradient-to-r ${themeGradient} text-transparent bg-clip-text`}>Bắt đầu bằng cách nhập một ý tưởng, hoặc chọn một trong các gợi ý dưới đây:</p>
+      <p className={`mt-4 mb-6 text-lg font-medium bg-gradient-to-r ${currentTheme.gradient} text-transparent bg-clip-text`}>Bắt đầu bằng cách nhập một ý tưởng, hoặc chọn một trong các gợi ý dưới đây:</p>
       <div className="flex flex-wrap justify-center gap-3">
         {displayedSuggestions.map((suggestion, index) => (
           <button
             key={index}
             onClick={() => setUserInput(suggestion)}
-            className="px-3 py-1 bg-gray-800 text-gray-400 text-sm rounded-full border border-gray-700 hover:bg-gray-700 hover:text-white transition-colors"
+            className={`px-3 py-1 bg-gray-800 text-gray-400 text-sm rounded-full border border-gray-700 transition-colors ${currentTheme.textHover} ${currentTheme.borderHover}`}
           >
             {suggestion}
           </button>

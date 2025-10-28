@@ -17,7 +17,7 @@ const PasswordModal: React.FC<PasswordModalProps> = ({ isOpen, onClose, onSucces
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [error, setError] = useState('');
-  const themeGradient = themes[theme]?.gradient || themes.teal.gradient;
+  const currentTheme = themes[theme] || themes.teal;
 
 
   useEffect(() => {
@@ -69,7 +69,7 @@ const PasswordModal: React.FC<PasswordModalProps> = ({ isOpen, onClose, onSucces
                     {mode === 'login' ? <LockClosedIcon /> : <KeyIcon />}
                 </div>
                 <div>
-                    <h2 className={`text-xl font-bold bg-gradient-to-r ${themeGradient} text-transparent bg-clip-text`}>{mode === 'login' ? 'Yêu cầu Mật khẩu' : 'Đổi Mật khẩu'}</h2>
+                    <h2 className={`text-xl font-bold bg-gradient-to-r ${currentTheme.gradient} text-transparent bg-clip-text`}>{mode === 'login' ? 'Yêu cầu Mật khẩu' : 'Đổi Mật khẩu'}</h2>
                     <p className="text-sm text-gray-400">
                         {mode === 'login' ? 'Vui lòng nhập mật khẩu để tiếp tục.' : 'Nhập mật khẩu cũ và mới.'}
                     </p>
@@ -82,7 +82,7 @@ const PasswordModal: React.FC<PasswordModalProps> = ({ isOpen, onClose, onSucces
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Nhập mật khẩu"
-                className="w-full p-3 bg-gray-900 border-2 border-gray-700 rounded-lg focus:ring-2 focus:ring-teal-400 focus:border-teal-400 outline-none transition-all duration-300"
+                className={`w-full p-3 bg-gray-900 border-2 border-gray-700 rounded-lg focus:ring-2 ${currentTheme.focusRing} ${currentTheme.border} outline-none transition-all duration-300`}
                 autoFocus
               />
             )}
@@ -94,7 +94,7 @@ const PasswordModal: React.FC<PasswordModalProps> = ({ isOpen, onClose, onSucces
                   value={oldPassword}
                   onChange={(e) => setOldPassword(e.target.value)}
                   placeholder="Mật khẩu cũ"
-                  className="w-full p-3 bg-gray-900 border-2 border-gray-700 rounded-lg focus:ring-2 focus:ring-teal-400 focus:border-teal-400 outline-none transition-all duration-300"
+                  className={`w-full p-3 bg-gray-900 border-2 border-gray-700 rounded-lg focus:ring-2 ${currentTheme.focusRing} ${currentTheme.border} outline-none transition-all duration-300`}
                   autoFocus
                 />
                 <input
@@ -102,7 +102,7 @@ const PasswordModal: React.FC<PasswordModalProps> = ({ isOpen, onClose, onSucces
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="Mật khẩu mới (ít nhất 6 ký tự)"
-                  className="w-full p-3 bg-gray-900 border-2 border-gray-700 rounded-lg focus:ring-2 focus:ring-teal-400 focus:border-teal-400 outline-none transition-all duration-300"
+                  className={`w-full p-3 bg-gray-900 border-2 border-gray-700 rounded-lg focus:ring-2 ${currentTheme.focusRing} ${currentTheme.border} outline-none transition-all duration-300`}
                 />
               </div>
             )}
@@ -119,7 +119,7 @@ const PasswordModal: React.FC<PasswordModalProps> = ({ isOpen, onClose, onSucces
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-teal-600 rounded-md text-sm text-white hover:bg-teal-700 transition-colors"
+                className={`px-4 py-2 rounded-md text-sm text-white transition-colors ${currentTheme.bg} ${currentTheme.bgHover}`}
               >
                 {mode === 'login' ? 'Xác nhận' : 'Lưu'}
               </button>

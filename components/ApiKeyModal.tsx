@@ -21,9 +21,9 @@ interface ApiKeyModalProps {
   theme: string;
 }
 
-const StatusIcon: React.FC<{ status: ApiKeyStatus }> = ({ status }) => {
+const StatusIcon: React.FC<{ status: ApiKeyStatus; themeColor: string; }> = ({ status, themeColor }) => {
     if (status === 'checking') {
-        return <div className="w-4 h-4 border-2 border-t-teal-400 border-gray-500 rounded-full animate-spin"></div>;
+        return <div className={`w-4 h-4 border-2 border-t-${themeColor}-400 border-gray-500 rounded-full animate-spin`}></div>;
     }
     if (status === 'valid') {
         return <div className="text-green-400"><CheckCircleIcon /></div>;
@@ -54,7 +54,7 @@ const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
   const [geminiKeysInput, setGeminiKeysInput] = useState('');
   const [openAiKeysInput, setOpenAiKeysInput] = useState('');
   const [isChecking, setIsChecking] = useState(false);
-  const themeGradient = themes[theme]?.gradient || themes.teal.gradient;
+  const currentTheme = themes[theme] || themes.teal;
 
 
   useEffect(() => {
@@ -88,7 +88,7 @@ const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4" onClick={onClose}>
       <div className="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-3xl mx-4 flex flex-col h-[90vh]" onClick={e => e.stopPropagation()}>
-        <h2 className={`text-xl font-bold mb-2 bg-gradient-to-r ${themeGradient} text-transparent bg-clip-text`}>Quản lý API Keys</h2>
+        <h2 className={`text-xl font-bold mb-2 bg-gradient-to-r ${currentTheme.gradient} text-transparent bg-clip-text`}>Quản lý API Keys</h2>
         <p className="text-gray-400 mb-4 text-sm">
           Thêm hoặc chỉnh sửa API Keys cho Google Gemini và OpenAI. Hệ thống sẽ tự động thử các key hợp lệ theo thứ tự.
         </p>
@@ -104,20 +104,20 @@ const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
                     value={geminiKeysInput}
                     onChange={(e) => setGeminiKeysInput(e.target.value)}
                     placeholder="Dán các Gemini API Key vào đây..."
-                    className="flex-grow p-3 bg-gray-900 border-2 border-gray-700 rounded-lg focus:ring-2 focus:ring-teal-400 focus:border-teal-400 outline-none transition-all duration-300 font-mono text-sm resize-none"
+                    className={`flex-grow p-3 bg-gray-900 border-2 border-gray-700 rounded-lg focus:ring-2 ${currentTheme.focusRing} ${currentTheme.border} outline-none transition-all duration-300 font-mono text-sm resize-none`}
                 />
-                <div className="text-xs text-gray-400 mt-2">Lấy key từ <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-teal-400 hover:underline">Google AI Studio</a>.</div>
+                <div className="text-xs text-gray-400 mt-2">Lấy key từ <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className={`${currentTheme.text} hover:underline`}>Google AI Studio</a>.</div>
                 <div className="h-40 overflow-y-auto bg-gray-800/50 p-2 rounded-lg border border-gray-700/50 mt-3">
                   {currentApiKeys.length > 0 ? (
                       <ul className="space-y-2">
                           {currentApiKeys.map((key, index) => (
-                              <li key={index} className={`flex items-center justify-between p-2 rounded-md transition-colors ${index === activeApiKeyIndex ? 'bg-teal-900/70' : 'bg-gray-700'}`}>
+                              <li key={index} className={`flex items-center justify-between p-2 rounded-md transition-colors ${index === activeApiKeyIndex ? currentTheme.activeBg : 'bg-gray-700'}`}>
                                   <div className="flex items-center space-x-3 overflow-hidden">
-                                      <StatusIcon status={apiKeyStatuses[index] || 'idle'} />
+                                      <StatusIcon status={apiKeyStatuses[index] || 'idle'} themeColor={theme} />
                                       <span className="font-mono text-sm text-gray-300 truncate" title={key}>{`...${key.slice(-6)}`}</span>
                                   </div>
                                   <div className="flex items-center space-x-2 flex-shrink-0">
-                                      {index === activeApiKeyIndex && <span className="text-xs text-teal-300 font-bold bg-teal-800/80 px-2 py-1 rounded-full">ACTIVE</span>}
+                                      {index === activeApiKeyIndex && <span className={`text-xs ${currentTheme.text} font-bold ${currentTheme.activeBg} px-2 py-1 rounded-full`}>ACTIVE</span>}
                                       <button onClick={() => onDeleteKey(index)} className="p-1.5 text-gray-400 hover:bg-red-500/20 hover:text-red-400 rounded-full transition-colors" aria-label={`Xóa Key ${index + 1}`}><TrashIcon /></button>
                                   </div>
                               </li>
@@ -138,20 +138,20 @@ const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
                     value={openAiKeysInput}
                     onChange={(e) => setOpenAiKeysInput(e.target.value)}
                     placeholder="Dán các OpenAI API Key vào đây..."
-                    className="flex-grow p-3 bg-gray-900 border-2 border-gray-700 rounded-lg focus:ring-2 focus:ring-teal-400 focus:border-teal-400 outline-none transition-all duration-300 font-mono text-sm resize-none"
+                    className={`flex-grow p-3 bg-gray-900 border-2 border-gray-700 rounded-lg focus:ring-2 ${currentTheme.focusRing} ${currentTheme.border} outline-none transition-all duration-300 font-mono text-sm resize-none`}
                 />
-                <div className="text-xs text-gray-400 mt-2">Lấy key từ <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-teal-400 hover:underline">trang tổng quan OpenAI</a>.</div>
+                <div className="text-xs text-gray-400 mt-2">Lấy key từ <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className={`${currentTheme.text} hover:underline`}>trang tổng quan OpenAI</a>.</div>
                 <div className="h-40 overflow-y-auto bg-gray-800/50 p-2 rounded-lg border border-gray-700/50 mt-3">
                   {currentOpenAIApiKeys.length > 0 ? (
                       <ul className="space-y-2">
                           {currentOpenAIApiKeys.map((key, index) => (
-                              <li key={index} className={`flex items-center justify-between p-2 rounded-md transition-colors ${index === activeOpenAIApiKeyIndex ? 'bg-teal-900/70' : 'bg-gray-700'}`}>
+                              <li key={index} className={`flex items-center justify-between p-2 rounded-md transition-colors ${index === activeOpenAIApiKeyIndex ? currentTheme.activeBg : 'bg-gray-700'}`}>
                                   <div className="flex items-center space-x-3 overflow-hidden">
-                                      <StatusIcon status={openAIApiKeyStatuses[index] || 'idle'} />
+                                      <StatusIcon status={openAIApiKeyStatuses[index] || 'idle'} themeColor={theme} />
                                       <span className="font-mono text-sm text-gray-300 truncate" title={key}>{`...${key.slice(-6)}`}</span>
                                   </div>
                                   <div className="flex items-center space-x-2 flex-shrink-0">
-                                      {index === activeOpenAIApiKeyIndex && <span className="text-xs text-teal-300 font-bold bg-teal-800/80 px-2 py-1 rounded-full">ACTIVE</span>}
+                                      {index === activeOpenAIApiKeyIndex && <span className={`text-xs ${currentTheme.text} font-bold ${currentTheme.activeBg} px-2 py-1 rounded-full`}>ACTIVE</span>}
                                       <button onClick={() => onDeleteOpenAiKey(index)} className="p-1.5 text-gray-400 hover:bg-red-500/20 hover:text-red-400 rounded-full transition-colors" aria-label={`Xóa OpenAI Key ${index + 1}`}><TrashIcon /></button>
                                   </div>
                               </li>
@@ -175,7 +175,7 @@ const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
           <button
             onClick={handleSave}
             disabled={isChecking}
-            className="flex items-center justify-center gap-2 px-4 py-2 bg-teal-600 rounded-md text-sm text-white hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`flex items-center justify-center gap-2 px-4 py-2 rounded-md text-sm text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${currentTheme.bg} ${currentTheme.bgHover}`}
           >
             {isChecking && <div className="w-4 h-4 border-2 border-t-white border-teal-800 rounded-full animate-spin"></div>}
             <span>{isChecking ? 'Đang kiểm tra...' : 'Lưu và kiểm tra tất cả'}</span>

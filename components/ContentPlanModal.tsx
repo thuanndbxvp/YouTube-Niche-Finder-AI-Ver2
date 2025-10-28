@@ -18,7 +18,7 @@ interface ContentPlanModalProps {
 const ContentPlanModal: React.FC<ContentPlanModalProps> = ({ isOpen, onClose, contentPlan, activeNiche, onLoadMore, isLoadingMore, theme }) => {
   if (!isOpen || !contentPlan) return null;
 
-  const themeGradient = themes[theme]?.gradient || themes.teal.gradient;
+  const currentTheme = themes[theme] || themes.teal;
 
   const handleDownload = () => {
     if (contentPlan && activeNiche) {
@@ -41,7 +41,7 @@ const ContentPlanModal: React.FC<ContentPlanModalProps> = ({ isOpen, onClose, co
                     <DocumentTextIcon />
                 </div>
                 <div>
-                    <h2 className={`text-xl font-bold bg-gradient-to-r ${themeGradient} text-transparent bg-clip-text`}>Kế hoạch nội dung chi tiết</h2>
+                    <h2 className={`text-xl font-bold bg-gradient-to-r ${currentTheme.gradient} text-transparent bg-clip-text`}>Kế hoạch nội dung chi tiết</h2>
                     <p className="text-sm text-gray-400">Dưới đây là các ý tưởng kịch bản chi tiết cho ngách: <span className="font-semibold text-gray-300">{activeNiche?.niche_name.translated}</span></p>
                 </div>
             </div>
@@ -60,7 +60,7 @@ const ContentPlanModal: React.FC<ContentPlanModalProps> = ({ isOpen, onClose, co
               key={index} 
               className={`border border-gray-700/80 rounded-lg p-5 transition-colors duration-300 ${index % 2 === 0 ? 'bg-gray-800' : 'bg-gray-800/60'}`}
             >
-              <h3 className={`text-xl font-bold bg-gradient-to-r ${themeGradient} text-transparent bg-clip-text`}>
+              <h3 className={`text-xl font-bold bg-gradient-to-r ${currentTheme.gradient} text-transparent bg-clip-text`}>
                 <span className="text-gray-400 font-bold">{`${index + 1}. `}</span>
                 {idea.title.original}
               </h3>
@@ -121,7 +121,7 @@ const ContentPlanModal: React.FC<ContentPlanModalProps> = ({ isOpen, onClose, co
             </button>
             <button
                 onClick={onClose}
-                className="px-4 py-2 bg-teal-600 rounded-md text-sm text-white hover:bg-teal-700 transition-colors font-semibold"
+                className={`px-4 py-2 rounded-md text-sm text-white transition-colors font-semibold ${currentTheme.bg} ${currentTheme.bgHover}`}
             >
                 Đóng
             </button>

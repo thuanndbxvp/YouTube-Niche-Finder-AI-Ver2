@@ -17,7 +17,7 @@ import NotificationCenter from './components/NotificationCenter';
 import LibraryModal from './components/LibraryModal';
 import { keyFindingTranscript, nicheKnowledgeBase, parseKnowledgeBaseForSuggestions } from './data/knowledgeBase';
 import { exportNichesToCsv, exportVideoIdeasToTxt } from './utils/export';
-import { themes } from './theme';
+import { themes, Theme } from './theme';
 
 export type ApiKeyStatus = 'idle' | 'checking' | 'valid' | 'invalid';
 
@@ -42,13 +42,14 @@ const FilterDropdown: React.FC<{
     onChange: (value: FilterLevel) => void;
     disabled: boolean;
     tooltipText: string;
-}> = ({ label, value, onChange, disabled, tooltipText }) => (
+    theme: Theme;
+}> = ({ label, value, onChange, disabled, tooltipText, theme }) => (
     <div className="relative group">
         <label className="block text-xs font-medium text-gray-400 mb-1">{label}</label>
         <select
             value={value}
             onChange={(e) => onChange(e.target.value as FilterLevel)}
-            className="w-full p-2 bg-gray-800 border border-gray-700 rounded-md text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none transition-all duration-300"
+            className={`w-full p-2 bg-gray-800 border border-gray-700 rounded-md text-sm focus:ring-2 ${theme.focusRing} ${theme.border} outline-none transition-all duration-300`}
             disabled={disabled}
         >
             <option value="all">Tất cả</option>
@@ -131,6 +132,8 @@ const App: React.FC = () => {
   
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const themeDropdownRef = useRef<HTMLDivElement>(null);
+
+  const currentTheme = themes[theme] || themes.teal;
 
   // Helper function to validate keys and set statuses
   const checkAndSetAllApiKeys = async (geminiKeys: string[], openaiKeys: string[]) => {
@@ -358,14 +361,14 @@ const App: React.FC = () => {
           <h4 className="font-semibold text-gray-200 mb-2">Làm thế nào để lấy API Key?</h4>
           {provider === 'gemini' ? (
             <ol className="list-decimal list-inside text-gray-400 text-sm space-y-1">
-              <li>Truy cập <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-teal-400 hover:underline">Google AI Studio</a>.</li>
+              <li>Truy cập <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className={`${currentTheme.text} hover:underline`}>Google AI Studio</a>.</li>
               <li>Đăng nhập bằng tài khoản Google của bạn.</li>
               <li>Nhấp vào nút "Get API Key" hoặc "Create API key".</li>
               <li>Sao chép key và dán vào công cụ của chúng tôi thông qua nút "API".</li>
             </ol>
           ) : (
              <ol className="list-decimal list-inside text-gray-400 text-sm space-y-1">
-              <li>Truy cập <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-teal-400 hover:underline">OpenAI API Keys</a>.</li>
+              <li>Truy cập <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className={`${currentTheme.text} hover:underline`}>OpenAI API Keys</a>.</li>
               <li>Đăng nhập hoặc đăng ký tài khoản OpenAI.</li>
               <li>Nhấp vào nút "Create new secret key".</li>
               <li>Sao chép key và dán vào công cụ của chúng tôi thông qua nút "API".</li>
@@ -944,6 +947,7 @@ const App: React.FC = () => {
               handleAnalysis={handleAnalysis}
               isLoading={isLoading}
               placeholder={searchPlaceholder}
+              theme={currentTheme}
             />
             <div className="w-full max-w-2xl text-left">
                 <div className="flex items-center justify-center gap-6 bg-gray-800/50 border border-gray-700 p-3 rounded-lg">
@@ -956,7 +960,7 @@ const App: React.FC = () => {
                                 value="related"
                                 checked={analysisType === 'related'}
                                 onChange={() => setAnalysisType('related')}
-                                className="form-radio h-4 w-4 text-teal-500 bg-gray-700 border-gray-600 focus:ring-teal-500"
+                                className={`form-radio h-4 w-4 bg-gray-700 border-gray-600 ${currentTheme.radio} ${currentTheme.focusRing}`}
                                 disabled={isLoading}
                             />
                             <span>Tìm chủ đề liên quan</span>
@@ -968,7 +972,7 @@ const App: React.FC = () => {
                                 value="direct"
                                 checked={analysisType === 'direct'}
                                 onChange={() => setAnalysisType('direct')}
-                                className="form-radio h-4 w-4 text-teal-500 bg-gray-700 border-gray-600 focus:ring-teal-500"
+                                className={`form-radio h-4 w-4 bg-gray-700 border-gray-600 ${currentTheme.radio} ${currentTheme.focusRing}`}
                                 disabled={isLoading}
                             />
                             <span>Phân tích key này</span>
@@ -984,7 +988,7 @@ const App: React.FC = () => {
                             id="model-select"
                             value={selectedModel}
                             onChange={(e) => setSelectedModel(e.target.value)}
-                            className="w-full p-3 bg-gray-800 border-2 border-gray-700 rounded-lg focus:ring-2 focus:ring-teal-400 focus:border-teal-400 outline-none transition-all duration-300"
+                            className={`w-full p-3 bg-gray-800 border-2 border-gray-700 rounded-lg focus:ring-2 ${currentTheme.focusRing} ${currentTheme.border} outline-none transition-all duration-300`}
                             disabled={isLoading}
                         >
                             <optgroup label="Google Gemini">
@@ -1004,7 +1008,7 @@ const App: React.FC = () => {
                             id="market-select"
                             value={targetMarket}
                             onChange={(e) => setTargetMarket(e.target.value)}
-                            className="w-full p-3 bg-gray-800 border-2 border-gray-700 rounded-lg focus:ring-2 focus:ring-teal-400 focus:border-teal-400 outline-none transition-all duration-300"
+                            className={`w-full p-3 bg-gray-800 border-2 border-gray-700 rounded-lg focus:ring-2 ${currentTheme.focusRing} ${currentTheme.border} outline-none transition-all duration-300`}
                             disabled={isLoading}
                         >
                             {markets.map(m => <option key={m} value={m}>{m === 'Custom' ? 'Tùy chỉnh...' : m}</option>)}
@@ -1016,7 +1020,7 @@ const App: React.FC = () => {
                             id="num-results-select"
                             value={numResults}
                             onChange={(e) => setNumResults(e.target.value)}
-                            className="w-full p-3 bg-gray-800 border-2 border-gray-700 rounded-lg focus:ring-2 focus:ring-teal-400 focus:border-teal-400 outline-none transition-all duration-300"
+                            className={`w-full p-3 bg-gray-800 border-2 border-gray-700 rounded-lg focus:ring-2 ${currentTheme.focusRing} ${currentTheme.border} outline-none transition-all duration-300`}
                             disabled={isLoading || analysisType === 'direct'}
                         >
                             <option value="5">5</option>
@@ -1033,7 +1037,7 @@ const App: React.FC = () => {
                         value={customMarket}
                         onChange={(e) => setCustomMarket(e.target.value)}
                         placeholder="Nhập thị trường khác (ví dụ: 'Ấn Độ', 'Brazil')"
-                        className="w-full p-3 bg-gray-800 border-2 border-gray-700 rounded-lg focus:ring-2 focus:ring-teal-400 focus:border-teal-400 outline-none transition-all duration-300 placeholder-gray-500"
+                        className={`w-full p-3 bg-gray-800 border-2 border-gray-700 rounded-lg focus:ring-2 ${currentTheme.focusRing} ${currentTheme.border} outline-none transition-all duration-300 placeholder-gray-500`}
                         disabled={isLoading}
                     />
                 )}
@@ -1045,6 +1049,7 @@ const App: React.FC = () => {
                         onChange={setInterestLevel} 
                         disabled={isLoading || analysisType === 'direct'}
                         tooltipText="Lọc các ngách dựa trên mức độ quan tâm và khối lượng tìm kiếm của khán giả. 'Cao' có nghĩa là rất phổ biến."
+                        theme={currentTheme}
                     />
                     <FilterDropdown 
                         label="Tiềm năng kiếm tiền" 
@@ -1052,6 +1057,7 @@ const App: React.FC = () => {
                         onChange={setMonetizationLevel} 
                         disabled={isLoading || analysisType === 'direct'}
                         tooltipText="Lọc các ngách dựa trên khả năng kiếm tiền (quảng cáo, affiliate, v.v.). 'Cao' có nghĩa là RPM ước tính cao hơn."
+                        theme={currentTheme}
                     />
                     <FilterDropdown 
                         label="Mức độ cạnh tranh" 
@@ -1059,6 +1065,7 @@ const App: React.FC = () => {
                         onChange={setCompetitionLevel} 
                         disabled={isLoading || analysisType === 'direct'}
                         tooltipText="Lọc các ngách dựa trên mức độ cạnh tranh. 'Thấp' có nghĩa là ít cạnh tranh hơn, dễ dàng hơn để nổi bật."
+                        theme={currentTheme}
                     />
                     <FilterDropdown 
                         label="Tính bền vững" 
@@ -1066,6 +1073,7 @@ const App: React.FC = () => {
                         onChange={setSustainabilityLevel} 
                         disabled={isLoading || analysisType === 'direct'}
                         tooltipText="Lọc các ngách dựa trên tiềm năng lâu dài và khả năng tạo nội dung bền vững. 'Cao' có nghĩa là ngách có tính evergreen."
+                        theme={currentTheme}
                     />
                 </div>
             </div>
@@ -1073,7 +1081,7 @@ const App: React.FC = () => {
                 <button
                     onClick={handleAnalysis}
                     disabled={isLoading}
-                    className="w-full sm:flex-1 px-8 py-3 bg-gradient-to-r from-blue-500 to-teal-500 text-white font-semibold rounded-lg shadow-md hover:shadow-lg hover:from-blue-600 hover:to-teal-600 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 flex items-center justify-center space-x-2"
+                    className={`w-full sm:flex-1 px-8 py-3 ${currentTheme.bg} ${currentTheme.bgHover} text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 flex items-center justify-center space-x-2`}
                 >
                     <span>{isLoading ? 'Đang phân tích...' : 'Phân Tích Ý Tưởng'}</span>
                 </button>

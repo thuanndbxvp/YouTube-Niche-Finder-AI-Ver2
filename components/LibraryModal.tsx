@@ -29,7 +29,7 @@ const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, savedNiche
   const [isUploadingToDrive, setIsUploadingToDrive] = useState(false);
   const [uploadMessage, setUploadMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
-  const themeGradient = themes[theme]?.gradient || themes.teal.gradient;
+  const currentTheme = themes[theme] || themes.teal;
   const isGoogleDriveConfigured = CLIENT_ID && CLIENT_ID !== 'YOUR_CLIENT_ID.apps.googleusercontent.com';
 
   useEffect(() => {
@@ -195,7 +195,7 @@ const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, savedNiche
                         </>
                     )}
                 </button>
-                 <button onClick={handleSignoutClick} className="w-full text-xs text-gray-400 hover:underline">
+                 <button onClick={handleSignoutClick} className={`w-full text-xs ${currentTheme.text} hover:underline`}>
                     Đăng xuất
                 </button>
             </div>
@@ -212,7 +212,7 @@ const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, savedNiche
                     <BookmarkIcon />
                 </div>
                 <div>
-                    <h2 className={`text-xl font-bold bg-gradient-to-r ${themeGradient} text-transparent bg-clip-text`}>Thư viện ý tưởng đã lưu</h2>
+                    <h2 className={`text-xl font-bold bg-gradient-to-r ${currentTheme.gradient} text-transparent bg-clip-text`}>Thư viện ý tưởng đã lưu</h2>
                     <p className="text-sm text-gray-400">Quản lý và xuất các ý tưởng ngách bạn đã lưu.</p>
                 </div>
             </div>
@@ -253,7 +253,7 @@ const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, savedNiche
         
         <div className="p-4 border-t border-gray-700 space-y-4">
             <div className="p-4 bg-gray-900/50 rounded-lg border border-gray-700/50">
-                <h3 className={`font-semibold mb-3 bg-gradient-to-r ${themeGradient} text-transparent bg-clip-text`}>Đồng bộ với Google Drive</h3>
+                <h3 className={`font-semibold mb-3 bg-gradient-to-r ${currentTheme.gradient} text-transparent bg-clip-text`}>Đồng bộ với Google Drive</h3>
                 {renderGoogleDriveSection()}
                 {uploadMessage && (
                     <div className={`mt-3 p-2 rounded-md text-sm flex items-start gap-2 ${uploadMessage.type === 'success' ? 'bg-green-900/50 text-green-300' : 'bg-red-900/50 text-red-300'}`}>
@@ -275,7 +275,7 @@ const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, savedNiche
                 <button
                     onClick={() => savedNiches.length > 0 && onExport()}
                     disabled={savedNiches.length === 0}
-                    className="flex items-center justify-center gap-2 px-4 py-2 bg-teal-600 text-white font-semibold rounded-lg shadow-md hover:bg-teal-700 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
+                    className={`flex items-center justify-center gap-2 px-4 py-2 text-white font-semibold rounded-lg shadow-md transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 ${currentTheme.bg} ${currentTheme.bgHover}`}
                 >
                     <DownloadIcon />
                     <span>Tải về máy (.csv)</span>

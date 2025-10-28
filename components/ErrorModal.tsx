@@ -16,7 +16,7 @@ interface ErrorModalProps {
 const ErrorModal: React.FC<ErrorModalProps> = ({ isOpen, onClose, title, children, actionText, onAction, theme }) => {
   if (!isOpen) return null;
   
-  const themeGradient = themes[theme]?.gradient || themes.teal.gradient;
+  const currentTheme = themes[theme] || themes.teal;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4" onClick={onClose}>
@@ -26,7 +26,7 @@ const ErrorModal: React.FC<ErrorModalProps> = ({ isOpen, onClose, title, childre
             <ExclamationTriangleIcon />
           </div>
           <div>
-            <h2 className={`text-xl font-bold bg-gradient-to-r ${themeGradient} text-transparent bg-clip-text`}>{title}</h2>
+            <h2 className={`text-xl font-bold bg-gradient-to-r ${currentTheme.gradient} text-transparent bg-clip-text`}>{title}</h2>
             <div className="text-sm text-gray-400 mt-2">{children}</div>
           </div>
         </div>
@@ -34,7 +34,7 @@ const ErrorModal: React.FC<ErrorModalProps> = ({ isOpen, onClose, title, childre
            {actionText && onAction && (
             <button
               onClick={onAction}
-              className="px-5 py-2 bg-teal-600 rounded-md text-sm text-white hover:bg-teal-700 transition-colors font-semibold"
+              className={`px-5 py-2 rounded-md text-sm text-white transition-colors font-semibold ${currentTheme.bg} ${currentTheme.bgHover}`}
             >
               {actionText}
             </button>

@@ -83,7 +83,7 @@ const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, savedNiche
         </div>
         
         <footer className="p-4 border-t border-gray-700 flex justify-between items-center flex-wrap gap-4">
-            <div>
+            <div className="flex items-center gap-4">
                  <input
                     type="file"
                     ref={importInputRef}
@@ -96,7 +96,15 @@ const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, savedNiche
                     className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-600 text-white font-semibold rounded-lg shadow-md hover:bg-gray-500 transition-all duration-300"
                 >
                     <UploadIcon />
-                    <span>Import (.json)</span>
+                    <span>Import</span>
+                </button>
+                <button
+                    onClick={() => savedNiches.length > 0 && onExport()}
+                    disabled={savedNiches.length === 0}
+                    className={`flex items-center justify-center gap-2 px-4 py-2 text-white font-semibold rounded-lg shadow-md transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 ${currentTheme.bg} ${currentTheme.bgHover}`}
+                >
+                    <DownloadIcon />
+                    <span>Export</span>
                 </button>
             </div>
             <div className="flex items-center gap-4">
@@ -107,14 +115,6 @@ const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, savedNiche
                 >
                     <TrashIcon />
                     <span>Xóa tất cả</span>
-                </button>
-                <button
-                    onClick={() => savedNiches.length > 0 && onExport()}
-                    disabled={savedNiches.length === 0}
-                    className={`flex items-center justify-center gap-2 px-4 py-2 text-white font-semibold rounded-lg shadow-md transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 ${currentTheme.bg} ${currentTheme.bgHover}`}
-                >
-                    <DownloadIcon />
-                    <span>Export (.json)</span>
                 </button>
                 <button
                     onClick={onClose}

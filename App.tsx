@@ -16,7 +16,7 @@ import ErrorModal from './components/ErrorModal';
 import NotificationCenter from './components/NotificationCenter';
 import LibraryModal from './components/LibraryModal';
 import { keyFindingTranscript, nicheKnowledgeBase, parseKnowledgeBaseForSuggestions } from './data/knowledgeBase';
-import { exportNichesToCsv, exportVideoIdeasToTxt } from './utils/export';
+import { exportVideoIdeasToTxt } from './utils/export';
 import { themes, Theme } from './theme';
 
 export type ApiKeyStatus = 'idle' | 'checking' | 'valid' | 'invalid';
@@ -751,8 +751,93 @@ const App: React.FC = () => {
   };
 
   const handleExportSaved = () => {
-    exportNichesToCsv(savedNiches, `saved_niches_${new Date().toISOString().split('T')[0]}.csv`);
+    if (savedNiches.length === 0) {
+        setNotifications(prev => [...prev, {
+            id: Date.now(),
+            message: `Không có dữ liệu để xuất.`,
+            type: 'error'
+        }]);
+        return;
+    }
+    const jsonString = JSON.stringify(savedNiches, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `youtube_niche_library_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+     setNotifications(prev => [...prev, {
+        id: Date.now(),
+        message: 'Xuất thư viện thành công!',
+        type: 'success'
+    }]);
   };
+
+  const handleImportSaved = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const text = e.target?.result;
+        if (typeof text !== 'string') {
+          throw new Error('Không thể đọc file.');
+        }
+        const importedData = JSON.parse(text);
+
+        if (!Array.isArray(importedData)) {
+           throw new Error('File import không hợp lệ. Dữ liệu phải là một mảng.');
+        }
+        
+        if (importedData.length > 0 && (!importedData[0].niche_name || !importedData[0].niche_name.original)) {
+            throw new Error('Định dạng dữ liệu trong file không đúng.');
+        }
+
+        const existingNicheNames = new Set(savedNiches.map(n => n.niche_name.original));
+        const newUniqueNiches = importedData.filter(niche => 
+            niche.niche_name && niche.niche_name.original && !existingNicheNames.has(niche.niche_name.original)
+        );
+
+        if (newUniqueNiches.length === 0) {
+             setNotifications(prev => [...prev, {
+                id: Date.now(),
+                message: 'Không có ý tưởng mới nào được import. Dữ liệu có thể đã tồn tại.',
+                type: 'error'
+            }]);
+            return;
+        }
+
+        const updatedNiches = [...savedNiches, ...newUniqueNiches];
+        setSavedNiches(updatedNiches);
+        localStorage.setItem('savedNiches', JSON.stringify(updatedNiches));
+        
+        setNotifications(prev => [...prev, {
+            id: Date.now(),
+            message: `Import thành công! Đã thêm ${newUniqueNiches.length} ý tưởng mới vào thư viện.`,
+            type: 'success'
+        }]);
+        setIsLibraryModalOpen(false);
+
+      } catch (err: any) {
+        console.error("Lỗi khi import file:", err);
+        setNotifications(prev => [...prev, {
+            id: Date.now(),
+            message: `Lỗi import: ${err.message || 'File không hợp lệ hoặc bị hỏng.'}`,
+            type: 'error'
+        }]);
+      }
+    };
+    reader.onerror = () => {
+         setNotifications(prev => [...prev, {
+            id: Date.now(),
+            message: 'Không thể đọc file được chọn.',
+            type: 'error'
+        }]);
+    };
+    reader.readAsText(file);
+  };
+
 
   const handleExportVideoIdeas = (niche: Niche) => {
     exportVideoIdeasToTxt(niche);
@@ -1179,6 +1264,7 @@ const App: React.FC = () => {
         onDeleteNiche={handleDeleteSavedNiche}
         onDeleteAll={handleClearSavedNiches}
         onExport={handleExportSaved}
+        onImport={handleImportSaved}
         theme={theme}
       />
       <ErrorModal

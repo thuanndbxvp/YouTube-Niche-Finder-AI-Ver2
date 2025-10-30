@@ -764,7 +764,17 @@ const App: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `youtube_niche_library_${new Date().toISOString().split('T')[0]}.json`;
+    
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    const dateTimeString = `${year}${month}${day}_${hours}${minutes}${seconds}`;
+    link.download = `Nichefinder_${dateTimeString}.json`;
+
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

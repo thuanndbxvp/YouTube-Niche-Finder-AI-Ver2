@@ -13,10 +13,11 @@ interface LibraryModalProps {
   onDeleteAll: () => void;
   onExport: () => void;
   onImport: (file: File) => void;
+  onUseNiche: (niche: Niche) => void;
   theme: string;
 }
 
-const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, savedNiches, onDeleteNiche, onDeleteAll, onExport, onImport, theme }) => {
+const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, savedNiches, onDeleteNiche, onDeleteAll, onExport, onImport, onUseNiche, theme }) => {
   const importInputRef = useRef<HTMLInputElement>(null);
   const currentTheme = themes[theme] || themes.teal;
   
@@ -65,13 +66,22 @@ const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, savedNiche
                     <p className="font-semibold text-gray-200 truncate" title={niche.niche_name.original}>{niche.niche_name.original}</p>
                     <p className="text-sm text-gray-400 truncate" title={niche.niche_name.translated}>{niche.niche_name.translated}</p>
                   </div>
-                  <button
-                    onClick={() => onDeleteNiche(niche.niche_name.original)}
-                    className="p-1.5 text-gray-400 hover:bg-red-500/20 hover:text-red-400 rounded-full transition-colors flex-shrink-0 ml-4"
-                    aria-label={`Xóa niche ${niche.niche_name.translated}`}
-                  >
-                    <TrashIcon />
-                  </button>
+                  <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+                    <button
+                      onClick={() => onUseNiche(niche)}
+                      className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-colors ${currentTheme.bg} ${currentTheme.bgHover} text-white`}
+                      aria-label={`Sử dụng niche ${niche.niche_name.translated}`}
+                    >
+                      Sử dụng
+                    </button>
+                    <button
+                      onClick={() => onDeleteNiche(niche.niche_name.original)}
+                      className="p-1.5 text-gray-400 hover:bg-red-500/20 hover:text-red-400 rounded-full transition-colors"
+                      aria-label={`Xóa niche ${niche.niche_name.translated}`}
+                    >
+                      <TrashIcon />
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>

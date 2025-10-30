@@ -858,6 +858,19 @@ const App: React.FC = () => {
     });
   };
 
+  const handleUseSavedNiche = (niche: Niche) => {
+    setIsLibraryModalOpen(false);
+    setAnalysisResult({ niches: [niche] });
+    setUserInput(niche.niche_name.original);
+    setAnalysisType('direct');
+    setError(null);
+    setIsLoading(false);
+    
+    setTimeout(() => {
+        suggestionsRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  };
+
   const handleSendTrainingMessage = async (message: string, files: File[]) => {
     const isGemini = selectedModel.startsWith('gemini');
     if (isGemini && (apiKeys.length === 0 || !apiKeyStatuses.includes('valid'))) {
@@ -1265,6 +1278,7 @@ const App: React.FC = () => {
         onDeleteAll={handleClearSavedNiches}
         onExport={handleExportSaved}
         onImport={handleImportSaved}
+        onUseNiche={handleUseSavedNiche}
         theme={theme}
       />
       <ErrorModal

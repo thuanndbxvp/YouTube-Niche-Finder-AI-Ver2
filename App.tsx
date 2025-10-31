@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect, useRef } from 'react';
 // Fix: Import `getTrainingResponseWithOpenAI` to resolve reference error.
 import { analyzeNicheIdea, getTrainingResponse, generateContentPlan, validateApiKey, developVideoIdeas, generateVideoIdeasForNiche, validateOpenAiApiKey, analyzeNicheIdeaWithOpenAI, generateVideoIdeasForNicheWithOpenAI, developVideoIdeasWithOpenAI, generateContentPlanWithOpenAI, analyzeKeywordDirectly, analyzeKeywordDirectlyWithOpenAI, getTrainingResponseWithOpenAI, generateChannelPlan, generateChannelPlanWithOpenAI } from './services/geminiService';
@@ -134,6 +135,8 @@ const App: React.FC = () => {
   const [isChannelPlanModalOpen, setIsChannelPlanModalOpen] = useState<boolean>(false);
   const [channelPlanContent, setChannelPlanContent] = useState<string | null>(null);
   const [activeNicheForChannelPlan, setActiveNicheForChannelPlan] = useState<Niche | null>(null);
+  const [channelPlanCache, setChannelPlanCache] = useState<Record<string, string>>({});
+  const [isGeneratingMoreDetailedPlan, setIsGeneratingMoreDetailedPlan] = useState<boolean>(false);
 
   // Notifications State
   const [notifications, setNotifications] = useState<NotificationType[]>([]);
@@ -964,9 +967,36 @@ const App: React.FC = () => {
     }
 };
 
+const _generatePlanApiCall = async (niche: Niche, isMoreDetailed: boolean) => {
+    const isGemini = selectedModel.startsWith('gemini');
+    let result: string;
+    let successfulKeyIndex: number;
+
+    const options = { isMoreDetailed };
+
+    if (isGemini) {
+        ({ result, successfulKeyIndex } = await generateChannelPlan(niche, apiKeys, trainingChatHistory, onKeyFailure, options));
+        setActiveApiKeyIndex(successfulKeyIndex);
+        setActiveOpenAiApiKeyIndex(null);
+    } else {
+        ({ result, successfulKeyIndex } = await generateChannelPlanWithOpenAI(niche, openAiApiKeys, selectedModel, trainingChatHistory, onOpenAIKeyFailure, options));
+        setActiveOpenAiApiKeyIndex(successfulKeyIndex);
+        setActiveApiKeyIndex(null);
+    }
+    return result;
+}
+
 const handleGenerateChannelPlan = async (niche: Niche) => {
     const nicheName = niche.niche_name.original;
     if (generatingChannelPlan.has(nicheName)) return;
+
+    // Check cache first
+    if (channelPlanCache[nicheName]) {
+        setChannelPlanContent(channelPlanCache[nicheName]);
+        setActiveNicheForChannelPlan(niche);
+        setIsChannelPlanModalOpen(true);
+        return;
+    }
 
     const isGemini = selectedModel.startsWith('gemini');
     if (isGemini && (apiKeys.length === 0 || !apiKeyStatuses.includes('valid'))) {
@@ -982,20 +1012,10 @@ const handleGenerateChannelPlan = async (niche: Niche) => {
     setError(null);
     
     try {
-        let result: string;
-        let successfulKeyIndex: number;
-
-        if (isGemini) {
-          ({ result, successfulKeyIndex } = await generateChannelPlan(niche, apiKeys, trainingChatHistory, onKeyFailure));
-          setActiveApiKeyIndex(successfulKeyIndex);
-          setActiveOpenAiApiKeyIndex(null);
-        } else {
-          ({ result, successfulKeyIndex } = await generateChannelPlanWithOpenAI(niche, openAiApiKeys, selectedModel, trainingChatHistory, onOpenAIKeyFailure));
-          setActiveOpenAiApiKeyIndex(successfulKeyIndex);
-          setActiveApiKeyIndex(null);
-        }
+        const result = await _generatePlanApiCall(niche, false);
 
         setChannelPlanContent(result);
+        setChannelPlanCache(prev => ({ ...prev, [nicheName]: result }));
         setActiveNicheForChannelPlan(niche);
         setIsChannelPlanModalOpen(true);
     } catch (err: any) {
@@ -1015,6 +1035,34 @@ const handleGenerateChannelPlan = async (niche: Niche) => {
         });
     }
 };
+
+const handleGenerateMoreDetailedChannelPlan = async () => {
+    if (!activeNicheForChannelPlan) return;
+
+    const niche = activeNicheForChannelPlan;
+    const nicheName = niche.niche_name.original;
+
+    setIsGeneratingMoreDetailedPlan(true);
+    setError(null);
+    
+    try {
+        const result = await _generatePlanApiCall(niche, true);
+        setChannelPlanContent(result);
+        setChannelPlanCache(prev => ({ ...prev, [nicheName]: result }));
+    } catch (err: any) {
+        console.error(err);
+        setNotifications(prev => [...prev, {
+            id: Date.now(),
+            message: `Lỗi khi tạo kế hoạch chi tiết hơn: "${niche.niche_name.translated}". ${err.message || 'Vui lòng thử lại.'}`,
+            type: 'error'
+        }]);
+        setActiveApiKeyIndex(null);
+        setActiveOpenAiApiKeyIndex(null);
+    } finally {
+        setIsGeneratingMoreDetailedPlan(false);
+    }
+};
+
 
   const Logo: React.FC<{ theme: string }> = ({ theme }) => {
     const themeGradient = themes[theme]?.gradient || themes.teal.gradient;
@@ -1299,6 +1347,7 @@ const handleGenerateChannelPlan = async (niche: Niche) => {
                   theme={theme}
                   onGenerateChannelPlan={handleGenerateChannelPlan}
                   generatingChannelPlan={generatingChannelPlan}
+                  channelPlanCache={channelPlanCache}
                 />
             ) : (
                 !isLoading && !error && (
@@ -1358,6 +1407,8 @@ const handleGenerateChannelPlan = async (niche: Niche) => {
         planContent={channelPlanContent}
         activeNiche={activeNicheForChannelPlan}
         theme={theme}
+        onGenerateMoreDetailedPlan={handleGenerateMoreDetailedChannelPlan}
+        isLoadingMore={isGeneratingMoreDetailedPlan}
       />
       <LibraryModal
         isOpen={isLibraryModalOpen}

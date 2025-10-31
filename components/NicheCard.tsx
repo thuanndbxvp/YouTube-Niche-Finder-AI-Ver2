@@ -33,6 +33,7 @@ interface NicheCardProps {
   theme: string;
   onGenerateChannelPlan: (niche: Niche) => void;
   isGeneratingChannelPlan: boolean;
+  channelPlanCache: Record<string, string>;
 }
 
 interface AnalysisMetricProps {
@@ -77,9 +78,10 @@ const AnalysisMetric: React.FC<AnalysisMetricProps> = ({ icon, label, score, exp
 };
 
 
-const NicheCard: React.FC<NicheCardProps> = ({ niche, index, onDevelop, onToggleSave, isSaved, onUseNiche, onViewPlan, isGeneratingContent, hasContentPlan, onGenerateVideoIdeas, isGeneratingIdeas, onExportVideoIdeas, onExportNiche, isDirectAnalysis, theme, onGenerateChannelPlan, isGeneratingChannelPlan }) => {
+const NicheCard: React.FC<NicheCardProps> = ({ niche, index, onDevelop, onToggleSave, isSaved, onUseNiche, onViewPlan, isGeneratingContent, hasContentPlan, onGenerateVideoIdeas, isGeneratingIdeas, onExportVideoIdeas, onExportNiche, isDirectAnalysis, theme, onGenerateChannelPlan, isGeneratingChannelPlan, channelPlanCache }) => {
     const hasVideoIdeas = niche.video_ideas && niche.video_ideas.length > 0;
     const currentTheme = themes[theme] || themes.teal;
+    const hasChannelPlan = !!channelPlanCache[niche.niche_name.original];
 
     return (
         <div className={`border border-gray-700 rounded-2xl shadow-lg p-6 w-full text-left transition-all duration-300 ${currentTheme.borderHover} hover:shadow-teal-500/10 flex flex-col ${index % 2 === 0 ? 'bg-gray-800/50' : 'bg-gray-800/80'}`}>
@@ -92,7 +94,15 @@ const NicheCard: React.FC<NicheCardProps> = ({ niche, index, onDevelop, onToggle
                         <h3 className={`text-lg text-gray-400 -mt-1 ${!isDirectAnalysis ? 'pl-8' : ''}`}>{niche.niche_name.translated}</h3>
                     </div>
                     <div className="flex-shrink-0 ml-4 flex items-center gap-2">
-                         <button
+                        <button
+                            onClick={() => onExportNiche(niche)}
+                            className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-600 text-gray-300 font-semibold rounded-lg hover:bg-gray-500 hover:text-white transition-all duration-300 text-sm"
+                            title="Tải chi tiết ngách (không bao gồm ý tưởng video)"
+                        >
+                            <DownloadIcon />
+                            <span>Tải Chi Tiết</span>
+                        </button>
+                        <button
                             onClick={() => onGenerateChannelPlan(niche)}
                             disabled={isGeneratingChannelPlan}
                             className={`flex items-center justify-center gap-2 px-4 py-2 text-white font-semibold rounded-lg shadow-md transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed ${currentTheme.bg} ${currentTheme.bgHover} text-sm`}
@@ -106,17 +116,9 @@ const NicheCard: React.FC<NicheCardProps> = ({ niche, index, onDevelop, onToggle
                             ) : (
                                 <>
                                     <ClipboardListIcon />
-                                    <span>Kế hoạch xây kênh</span>
+                                    <span>{hasChannelPlan ? 'Xem Kế Hoạch' : 'Kế hoạch xây kênh'}</span>
                                 </>
                             )}
-                        </button>
-                        <button
-                            onClick={() => onExportNiche(niche)}
-                            className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-600 text-gray-300 font-semibold rounded-lg hover:bg-gray-500 hover:text-white transition-all duration-300 text-sm"
-                            title="Tải chi tiết ngách (không bao gồm ý tưởng video)"
-                        >
-                            <DownloadIcon />
-                            <span>Tải Chi Tiết</span>
                         </button>
                     </div>
                 </div>

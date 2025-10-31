@@ -1,5 +1,6 @@
 
 
+
 import React from 'react';
 import type { AnalysisResult, Niche, ContentPlanResult } from '../types';
 import NicheCard from './NicheCard';
@@ -26,9 +27,10 @@ interface ResultsDisplayProps {
   theme: string;
   onGenerateChannelPlan: (niche: Niche) => void;
   generatingChannelPlan: Set<string>;
+  channelPlanCache: Record<string, string>;
 }
 
-const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onDevelop, analysisDepth, onLoadMore, isLoadingMore, onToggleSave, savedNiches, onUseNiche, onViewPlan, generatingNiches, contentPlanCache, numResults, onGenerateVideoIdeas, generatingVideoIdeas, onExportVideoIdeas, onExportNiche, isDirectAnalysis, theme, onGenerateChannelPlan, generatingChannelPlan }) => {
+const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onDevelop, analysisDepth, onLoadMore, isLoadingMore, onToggleSave, savedNiches, onUseNiche, onViewPlan, generatingNiches, contentPlanCache, numResults, onGenerateVideoIdeas, generatingVideoIdeas, onExportVideoIdeas, onExportNiche, isDirectAnalysis, theme, onGenerateChannelPlan, generatingChannelPlan, channelPlanCache }) => {
   
   const numToAdd = parseInt(numResults, 10);
 
@@ -61,6 +63,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onDevelop, anal
               theme={theme}
               onGenerateChannelPlan={onGenerateChannelPlan}
               isGeneratingChannelPlan={isGeneratingPlan}
+              channelPlanCache={channelPlanCache}
             />
         );
       })}

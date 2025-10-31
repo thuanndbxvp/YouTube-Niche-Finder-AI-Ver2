@@ -1,5 +1,6 @@
 
 
+
 // Fix: Implement Gemini API service functions.
 import { GoogleGenAI, Type, Content } from "@google/genai";
 import type { AnalysisResult, ChatMessage, FilterLevel, Niche, ContentPlanResult, VideoIdea } from '../types';
@@ -612,6 +613,9 @@ const userChannelPlanInstruction = `Hãy đọc kỹ nội dung trong thẻ kế
 
 const channelPlanSystemInstruction = `You are a world-class YouTube channel development strategist. Your task is to generate a comprehensive, actionable channel growth plan based on the user's instructions and the provided niche data. The final output must be in VIETNAMESE and formatted clearly with markdown headers (## Title). You must follow all user instructions precisely.`;
 
+const moreDetailedChannelPlanSystemInstruction = `You are a world-class YouTube channel development strategist. A user has requested a more detailed version of a channel plan. Your task is to regenerate the plan to be **more detailed, in-depth, and provide even more actionable steps** than a standard plan. Expand on each section, especially SEO, content strategy, and long-term development. The final output must be in VIETNAMESE and formatted clearly with markdown headers (## Title). You must follow all user instructions precisely.`;
+
+
 const formatNicheDataForPrompt = (niche: Niche): string => {
     let nicheInfo = `
 --- DỮ LIỆU THẺ KẾT QUẢ NICHE (NICHE CARD DATA) ---
@@ -639,12 +643,18 @@ const formatNicheDataForPrompt = (niche: Niche): string => {
     return nicheInfo;
 };
 
+interface ChannelPlanOptions {
+  isMoreDetailed?: boolean;
+}
+
 export const generateChannelPlan = async (
     niche: Niche,
     apiKeys: string[],
     trainingHistory: ChatMessage[],
-    onKeyFailure: (index: number) => void
+    onKeyFailure: (index: number) => void,
+    options: ChannelPlanOptions = {}
 ): Promise<{ result: string, successfulKeyIndex: number }> => {
+    const { isMoreDetailed = false } = options;
     const modelName = 'gemini-2.5-pro';
     
     const formattedNicheData = formatNicheDataForPrompt(niche);
@@ -660,7 +670,7 @@ export const generateChannelPlan = async (
             model: modelName,
             contents: contents,
             config: {
-                systemInstruction: channelPlanSystemInstruction
+                systemInstruction: isMoreDetailed ? moreDetailedChannelPlanSystemInstruction : channelPlanSystemInstruction
             }
         });
         return response.text;
@@ -875,12 +885,14 @@ export const generateChannelPlanWithOpenAI = async (
     apiKeys: string[],
     model: string,
     trainingHistory: ChatMessage[],
-    onKeyFailure: (index: number) => void
+    onKeyFailure: (index: number) => void,
+    options: ChannelPlanOptions = {}
 ): Promise<{ result: string, successfulKeyIndex: number }> => {
+    const { isMoreDetailed = false } = options;
     const formattedNicheData = formatNicheDataForPrompt(niche);
     const userPrompt = `${userChannelPlanInstruction}\n\n${formattedNicheData}`;
     
-    const messages = convertToOpenAIMessages(trainingHistory, channelPlanSystemInstruction, userPrompt);
+    const messages = convertToOpenAIMessages(trainingHistory, isMoreDetailed ? moreDetailedChannelPlanSystemInstruction : channelPlanSystemInstruction, userPrompt);
     
     const action = async (key: string) => await callOpenAI(key, model, messages);
     return await executeOpenAIWithRetry(apiKeys, action, onKeyFailure);

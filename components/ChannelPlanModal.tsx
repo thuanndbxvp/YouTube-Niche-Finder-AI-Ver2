@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { Niche } from '../types';
-import { DocumentTextIcon, XIcon, ArrowsExpandIcon, ArrowsShrinkIcon, DownloadIcon } from './icons/Icons';
+import { DocumentTextIcon, XIcon, ArrowsExpandIcon, ArrowsShrinkIcon, DownloadIcon, PlusCircleIcon } from './icons/Icons';
 import { themes } from '../theme';
 import { exportTextToTxt } from '../utils/export';
 
@@ -10,9 +10,11 @@ interface ChannelPlanModalProps {
   planContent: string | null;
   activeNiche: Niche | null;
   theme: string;
+  onGenerateMoreDetailedPlan: () => void;
+  isLoadingMore: boolean;
 }
 
-const ChannelPlanModal: React.FC<ChannelPlanModalProps> = ({ isOpen, onClose, planContent, activeNiche, theme }) => {
+const ChannelPlanModal: React.FC<ChannelPlanModalProps> = ({ isOpen, onClose, planContent, activeNiche, theme, onGenerateMoreDetailedPlan, isLoadingMore }) => {
   const [isMaximized, setIsMaximized] = useState(false);
 
   if (!isOpen || !planContent) return null;
@@ -89,6 +91,23 @@ const ChannelPlanModal: React.FC<ChannelPlanModalProps> = ({ isOpen, onClose, pl
         </div>
         
          <footer className="p-4 border-t border-gray-700 flex justify-end items-center gap-4 flex-shrink-0">
+            <button
+                onClick={onGenerateMoreDetailedPlan}
+                disabled={isLoadingMore}
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-600 text-gray-200 rounded-md text-sm hover:bg-gray-500 hover:text-white font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+                {isLoadingMore ? (
+                    <>
+                        <div className="w-4 h-4 border-2 border-t-teal-400 border-gray-500 rounded-full animate-spin"></div>
+                        <span>Đang tạo...</span>
+                    </>
+                ) : (
+                    <>
+                        <PlusCircleIcon />
+                        <span>Kế hoạch chi tiết hơn</span>
+                    </>
+                )}
+            </button>
             <button
                 onClick={handleDownload}
                 className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-gray-200 rounded-md text-sm hover:bg-gray-500 hover:text-white font-semibold transition-colors"

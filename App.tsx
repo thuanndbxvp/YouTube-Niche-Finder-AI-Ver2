@@ -222,7 +222,16 @@ const App: React.FC = () => {
     try {
         const storedNiches = localStorage.getItem('savedNiches');
         if (storedNiches) {
-            setSavedNiches(JSON.parse(storedNiches));
+            const parsedNiches: Niche[] = JSON.parse(storedNiches);
+            setSavedNiches(parsedNiches);
+            // Populate channel plan cache from loaded niches
+            const initialChannelPlanCache: Record<string, string> = {};
+            for (const niche of parsedNiches) {
+                if (niche.channel_plan_content) {
+                    initialChannelPlanCache[niche.niche_name.original] = niche.channel_plan_content;
+                }
+            }
+            setChannelPlanCache(initialChannelPlanCache);
         }
     } catch (e) {
         console.error("Could not parse saved niches from localStorage", e);
@@ -806,57 +815,73 @@ const App: React.FC = () => {
   const handleImportSaved = (file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
-      try {
-        const text = e.target?.result;
-        if (typeof text !== 'string') {
-          throw new Error('Không thể đọc file.');
-        }
-        const importedData = JSON.parse(text);
+        try {
+            const text = e.target?.result;
+            if (typeof text !== 'string') {
+                throw new Error('Không thể đọc file.');
+            }
+            const importedData: Niche[] = JSON.parse(text);
 
-        if (!Array.isArray(importedData)) {
-           throw new Error('File import không hợp lệ. Dữ liệu phải là một mảng.');
-        }
-        
-        if (importedData.length > 0 && (!importedData[0].niche_name || !importedData[0].niche_name.original)) {
-            throw new Error('Định dạng dữ liệu trong file không đúng.');
-        }
+            if (!Array.isArray(importedData)) {
+                throw new Error('File import không hợp lệ. Dữ liệu phải là một mảng.');
+            }
 
-        const existingNicheNames = new Set(savedNiches.map(n => n.niche_name.original));
-        const newUniqueNiches = importedData.filter(niche => 
-            niche.niche_name && niche.niche_name.original && !existingNicheNames.has(niche.niche_name.original)
-        );
+            if (importedData.length > 0 && (!importedData[0].niche_name || !importedData[0].niche_name.original)) {
+                throw new Error('Định dạng dữ liệu trong file không đúng.');
+            }
 
-        if (newUniqueNiches.length === 0) {
-             setNotifications(prev => [...prev, {
+            const existingNicheNames = new Set(savedNiches.map(n => n.niche_name.original));
+            const newUniqueNiches = importedData.filter(niche =>
+                niche.niche_name && niche.niche_name.original && !existingNicheNames.has(niche.niche_name.original)
+            );
+
+            if (newUniqueNiches.length === 0) {
+                setNotifications(prev => [...prev, {
+                    id: Date.now(),
+                    message: 'Không có ý tưởng mới nào được import. Dữ liệu có thể đã tồn tại.',
+                    type: 'error'
+                }]);
+                return;
+            }
+
+            // Populate cache from imported niches
+            const newChannelPlanCacheUpdates: Record<string, string> = {};
+            for (const niche of newUniqueNiches) {
+                if (niche.channel_plan_content && typeof niche.channel_plan_content === 'string') {
+                    newChannelPlanCacheUpdates[niche.niche_name.original] = niche.channel_plan_content;
+                }
+            }
+
+            // Update states
+            const updatedNiches = [...savedNiches, ...newUniqueNiches];
+            setSavedNiches(updatedNiches);
+            localStorage.setItem('savedNiches', JSON.stringify(updatedNiches));
+
+            if (Object.keys(newChannelPlanCacheUpdates).length > 0) {
+                setChannelPlanCache(prevCache => ({
+                    ...prevCache,
+                    ...newChannelPlanCacheUpdates
+                }));
+            }
+
+            setNotifications(prev => [...prev, {
                 id: Date.now(),
-                message: 'Không có ý tưởng mới nào được import. Dữ liệu có thể đã tồn tại.',
+                message: `Import thành công! Đã thêm ${newUniqueNiches.length} ý tưởng mới vào thư viện.`,
+                type: 'success'
+            }]);
+            setIsLibraryModalOpen(false);
+
+        } catch (err: any) {
+            console.error("Lỗi khi import file:", err);
+            setNotifications(prev => [...prev, {
+                id: Date.now(),
+                message: `Lỗi import: ${err.message || 'File không hợp lệ hoặc bị hỏng.'}`,
                 type: 'error'
             }]);
-            return;
         }
-
-        const updatedNiches = [...savedNiches, ...newUniqueNiches];
-        setSavedNiches(updatedNiches);
-        localStorage.setItem('savedNiches', JSON.stringify(updatedNiches));
-        
-        setNotifications(prev => [...prev, {
-            id: Date.now(),
-            message: `Import thành công! Đã thêm ${newUniqueNiches.length} ý tưởng mới vào thư viện.`,
-            type: 'success'
-        }]);
-        setIsLibraryModalOpen(false);
-
-      } catch (err: any) {
-        console.error("Lỗi khi import file:", err);
-        setNotifications(prev => [...prev, {
-            id: Date.now(),
-            message: `Lỗi import: ${err.message || 'File không hợp lệ hoặc bị hỏng.'}`,
-            type: 'error'
-        }]);
-      }
     };
     reader.onerror = () => {
-         setNotifications(prev => [...prev, {
+        setNotifications(prev => [...prev, {
             id: Date.now(),
             message: 'Không thể đọc file được chọn.',
             type: 'error'
@@ -882,6 +907,7 @@ const App: React.FC = () => {
   const handleClearSavedNiches = () => {
     if (window.confirm(`Bạn có chắc chắn muốn xóa tất cả ${savedNiches.length} ý tưởng đã lưu không? Hành động này không thể hoàn tác.`)) {
         setSavedNiches([]);
+        setChannelPlanCache({}); // Also clear the channel plan cache
         localStorage.removeItem('savedNiches');
     }
   };
@@ -891,6 +917,12 @@ const App: React.FC = () => {
         const newSavedNiches = prev.filter(saved => saved.niche_name.original !== nicheNameToDelete);
         localStorage.setItem('savedNiches', JSON.stringify(newSavedNiches));
         return newSavedNiches;
+    });
+    // Also remove from cache
+    setChannelPlanCache(prev => {
+        const newCache = { ...prev };
+        delete newCache[nicheNameToDelete];
+        return newCache;
     });
   };
 

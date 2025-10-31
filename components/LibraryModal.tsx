@@ -1,7 +1,8 @@
 
+
 import React, { useRef } from 'react';
 import type { Niche } from '../types';
-import { BookmarkIcon, XIcon, DownloadIcon, TrashIcon, UploadIcon } from './icons/Icons';
+import { BookmarkIcon, XIcon, DownloadIcon, TrashIcon, UploadIcon, ClipboardListIcon } from './icons/Icons';
 import { themes } from '../theme';
 
 
@@ -14,10 +15,11 @@ interface LibraryModalProps {
   onExport: () => void;
   onImport: (file: File) => void;
   onUseNiche: (niche: Niche) => void;
+  onViewChannelPlan: (niche: Niche) => void;
   theme: string;
 }
 
-const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, savedNiches, onDeleteNiche, onDeleteAll, onExport, onImport, onUseNiche, theme }) => {
+const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, savedNiches, onDeleteNiche, onDeleteAll, onExport, onImport, onUseNiche, onViewChannelPlan, theme }) => {
   const importInputRef = useRef<HTMLInputElement>(null);
   const currentTheme = themes[theme] || themes.teal;
   
@@ -62,11 +64,27 @@ const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, savedNiche
             <ul className="space-y-2">
               {savedNiches.map((niche, index) => (
                 <li key={index} className="flex items-center justify-between p-3 rounded-md bg-gray-900/50 border border-gray-700/50 hover:bg-gray-700/50 transition-colors">
-                  <div className="flex-1 overflow-hidden">
-                    <p className="font-semibold text-gray-200 truncate" title={niche.niche_name.original}>{niche.niche_name.original}</p>
-                    <p className="text-sm text-gray-400 truncate" title={niche.niche_name.translated}>{niche.niche_name.translated}</p>
+                  <div className="flex-1 overflow-hidden flex items-center gap-3">
+                    {niche.channel_plan_content && (
+                        <span title="Đã có kế hoạch xây kênh" className={`${currentTheme.text}`}>
+                            <ClipboardListIcon/>
+                        </span>
+                    )}
+                    <div className="flex-1 overflow-hidden">
+                        <p className="font-semibold text-gray-200 truncate" title={niche.niche_name.original}>{niche.niche_name.original}</p>
+                        <p className="text-sm text-gray-400 truncate" title={niche.niche_name.translated}>{niche.niche_name.translated}</p>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+                    {niche.channel_plan_content && (
+                         <button
+                          onClick={() => onViewChannelPlan(niche)}
+                          className="px-3 py-1.5 text-sm font-semibold rounded-md transition-colors bg-gray-600 hover:bg-gray-500 text-white"
+                          aria-label={`Xem kế hoạch cho ${niche.niche_name.translated}`}
+                        >
+                          Xem Kế hoạch
+                        </button>
+                    )}
                     <button
                       onClick={() => onUseNiche(niche)}
                       className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-colors ${currentTheme.bg} ${currentTheme.bgHover} text-white`}

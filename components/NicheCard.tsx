@@ -124,7 +124,7 @@ const NicheCard: React.FC<NicheCardProps> = ({ niche, index, onDevelop, onToggle
                 </div>
                 <p className="text-gray-400 mb-6">{niche.description}</p>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     {/* Left Column */}
                     <div className="md:col-span-1 flex flex-col gap-6">
                         <div className="bg-gray-900/50 p-4 rounded-lg space-y-4 flex-1">
@@ -138,7 +138,7 @@ const NicheCard: React.FC<NicheCardProps> = ({ niche, index, onDevelop, onToggle
                     </div>
 
                     {/* Right Column */}
-                    <div className="md:col-span-2 bg-gray-900/50 p-4 rounded-lg space-y-5">
+                    <div className="md:col-span-1 bg-gray-900/50 p-4 rounded-lg space-y-5">
                         <h3 className="font-semibold text-gray-200 mb-2">Phân Tích Ngách</h3>
                         <AnalysisMetric icon={<TrendingUpIcon />} label="Mức Độ Quan Tâm" score={niche.analysis.interest_level.score} explanation={niche.analysis.interest_level.explanation} />
                         <AnalysisMetric icon={<DollarSignIcon />} label="Tiềm Năng Kiếm Tiền" score={niche.analysis.monetization_potential.score} explanation={niche.analysis.monetization_potential.explanation} rpm={niche.analysis.monetization_potential.rpm_estimate} />

@@ -1,6 +1,11 @@
 import React, { useState } from 'react';
 import type { Niche } from '../types';
-import { DocumentTextIcon, XIcon, ArrowsExpandIcon, ArrowsShrinkIcon, DownloadIcon, PlusCircleIcon } from './icons/Icons';
+// Fix: Import ClipboardListIcon to resolve reference error.
+import {
+    DocumentTextIcon, XIcon, ArrowsExpandIcon, ArrowsShrinkIcon, DownloadIcon, PlusCircleIcon,
+    InformationCircleIcon, UserGroupIcon, CollectionIcon, CalendarIcon, TrendingUpIcon, PaintBrushIcon,
+    DollarSignIcon, RocketLaunchIcon, TagIcon, ClipboardListIcon
+} from './icons/Icons';
 import { themes } from '../theme';
 import { exportTextToTxt } from '../utils/export';
 
@@ -14,6 +19,32 @@ interface ChannelPlanModalProps {
   isLoadingMore: boolean;
 }
 
+interface PlanSection {
+    icon: React.ReactNode;
+    title: string;
+    content: string;
+}
+
+// A simple markdown to HTML renderer for basic formatting
+const renderContent = (text: string) => {
+    let html = text
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/^- (.*$)/gim, '<li class="ml-4 list-disc">$1</li>')
+      .replace(/^ {2,}- (.*$)/gim, '<li class="ml-8 list-disc">$1</li>')
+      .replace(/^→ (.*$)/gim, '<p class="mt-2 pl-4 border-l-2 border-gray-600">$1</p>')
+      .replace(/`([^`]+)`/g, '<code class="bg-gray-700 text-sm rounded px-1 py-0.5 font-mono">$1</code>')
+      .replace(/\n/g, '<br />');
+
+    // Clean up extra breaks
+    html = html.replace(/<\/li><br \/>/g, '</li>');
+    html = html.replace(/<br \/><(ul|li|p)/g, '<$1');
+    html = html.replace(/<br \/><br \/>/g, '<br />');
+
+    return <div className="text-sm text-gray-300 leading-relaxed space-y-2" dangerouslySetInnerHTML={{ __html: html }} />;
+};
+
+
 const ChannelPlanModal: React.FC<ChannelPlanModalProps> = ({ isOpen, onClose, planContent, activeNiche, theme, onGenerateMoreDetailedPlan, isLoadingMore }) => {
   const [isMaximized, setIsMaximized] = useState(false);
 
@@ -26,42 +57,46 @@ const ChannelPlanModal: React.FC<ChannelPlanModalProps> = ({ isOpen, onClose, pl
         exportTextToTxt(planContent, `channel_plan_${activeNiche.niche_name.original}`);
     }
   };
-  
-  // A simple markdown to HTML renderer for basic formatting
-  const renderMarkdown = (text: string) => {
-    let html = text
-      .replace(/^## (.*$)/gim, '<h2 class="text-xl font-bold text-gray-200 mt-4 mb-2">$1</h2>')
-      .replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold text-gray-300 mt-3 mb-1">$1</h3>')
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/^- (.*$)/gim, '<li class="ml-6 list-disc">$1</li>')
-      .replace(/^( {2,})- (.*$)/gim, (match, spaces, content) => {
-          const indentLevel = Math.floor(spaces.length / 2);
-          return `<li style="margin-left: ${indentLevel * 1.5}rem;" class="list-disc">${content}</li>`
-      })
-      .replace(/\n/g, '<br />');
 
-    // Remove <br /> between list items and before headers to clean up spacing
-    html = html.replace(/<\/li><br \/><li>/g, '</li><li>');
-    html = html.replace(/<br \/>(<h[23]>)/g, '$1');
-
-    return <div className="text-sm text-gray-300 leading-relaxed" dangerouslySetInnerHTML={{ __html: html }} />;
+  const sectionIconMap: { [key: string]: React.ReactNode } = {
+    'tóm tắt kênh': <InformationCircleIcon />,
+    'đối tượng mục tiêu': <UserGroupIcon />,
+    'cấu trúc nội dung / series': <CollectionIcon />,
+    'lịch đăng video': <CalendarIcon />,
+    'chiến lược seo và tăng trưởng': <TrendingUpIcon />,
+    'thương hiệu, giọng điệu, phong cách hình ảnh': <PaintBrushIcon />,
+    'kế hoạch kiếm tiền': <DollarSignIcon />,
+    'định hướng phát triển dài hạn': <RocketLaunchIcon />,
+    'gợi ý 5 bộ tên kênh': <TagIcon />,
   };
-
+  
+  const parseMarkdownToSections = (text: string): PlanSection[] => {
+    const sections = text.split('## ').slice(1);
+    return sections.map(sectionText => {
+      const parts = sectionText.split('\n');
+      const title = parts[0].replace(/^[0-9]+\. /, '').trim();
+      const content = parts.slice(1).join('\n').trim();
+      const normalizedTitle = title.toLowerCase().replace(/^[0-9.]+\s*/, '');
+      const icon = sectionIconMap[normalizedTitle] || <DocumentTextIcon />;
+      return { icon, title, content };
+    });
+  };
+  
+  const planSections = parseMarkdownToSections(planContent);
 
   return (
     <div 
-        className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4" 
+        className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4 animate-fade-in-down" 
         onClick={onClose}
     >
       <div 
-        className={`bg-gray-800 rounded-lg shadow-xl flex flex-col transition-all duration-300 ${isMaximized ? 'w-full h-full max-w-full max-h-full rounded-none' : 'w-full max-w-4xl h-[90vh]'}`}
+        className={`bg-gray-800 rounded-lg shadow-xl flex flex-col transition-all duration-300 ${isMaximized ? 'w-full h-full max-w-full max-h-full rounded-none' : 'w-full max-w-5xl h-[90vh]'}`}
         onClick={e => e.stopPropagation()}
       >
         <header className="p-4 border-b border-gray-700 flex items-center justify-between flex-shrink-0">
             <div className="flex items-center space-x-3">
                 <div className="text-teal-400">
-                    <DocumentTextIcon />
+                    <ClipboardListIcon />
                 </div>
                 <div>
                     <h2 className={`text-xl font-bold bg-gradient-to-r ${currentTheme.gradient} text-transparent bg-clip-text`}>Kế hoạch phát triển kênh</h2>
@@ -86,8 +121,18 @@ const ChannelPlanModal: React.FC<ChannelPlanModalProps> = ({ isOpen, onClose, pl
             </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-900/50">
-           {renderMarkdown(planContent)}
+        <div className="flex-1 overflow-y-auto p-6 bg-gray-900/50">
+            <div className="space-y-4">
+                {planSections.map((section, index) => (
+                    <div key={index} className="bg-gray-800/70 border border-gray-700/80 rounded-lg p-5">
+                        <h3 className={`text-lg font-bold flex items-center gap-3 mb-3 bg-gradient-to-r ${currentTheme.gradient} text-transparent bg-clip-text`}>
+                            {React.cloneElement(section.icon as React.ReactElement, { className: `h-6 w-6 ${currentTheme.text}` })}
+                            <span>{section.title}</span>
+                        </h3>
+                        {renderContent(section.content)}
+                    </div>
+                ))}
+            </div>
         </div>
         
          <footer className="p-4 border-t border-gray-700 flex justify-end items-center gap-4 flex-shrink-0">

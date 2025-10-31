@@ -49,6 +49,7 @@ export interface Niche {
   analysis: AnalysisMetrics;
   content_strategy: string;
   video_ideas?: VideoIdea[];
+  channel_plan_content?: string;
 }
 
 export interface AnalysisResult {

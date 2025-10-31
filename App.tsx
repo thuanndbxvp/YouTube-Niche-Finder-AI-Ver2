@@ -1,6 +1,7 @@
 
 
 
+
 import React, { useState, useEffect, useRef } from 'react';
 // Fix: Import `getTrainingResponseWithOpenAI` to resolve reference error.
 import { analyzeNicheIdea, getTrainingResponse, generateContentPlan, validateApiKey, developVideoIdeas, generateVideoIdeasForNiche, validateOpenAiApiKey, analyzeNicheIdeaWithOpenAI, generateVideoIdeasForNicheWithOpenAI, developVideoIdeasWithOpenAI, generateContentPlanWithOpenAI, analyzeKeywordDirectly, analyzeKeywordDirectlyWithOpenAI, getTrainingResponseWithOpenAI, generateChannelPlan, generateChannelPlanWithOpenAI } from './services/geminiService';
@@ -754,7 +755,12 @@ const App: React.FC = () => {
         if (isSaved) {
             newSavedNiches = prev.filter(saved => saved.niche_name.original !== niche.niche_name.original);
         } else {
-            newSavedNiches = [...prev, niche];
+            const plan = channelPlanCache[niche.niche_name.original];
+            const nicheToSave = { ...niche };
+            if (plan) {
+                nicheToSave.channel_plan_content = plan;
+            }
+            newSavedNiches = [...prev, nicheToSave];
         }
         localStorage.setItem('savedNiches', JSON.stringify(newSavedNiches));
         return newSavedNiches;
@@ -900,6 +906,15 @@ const App: React.FC = () => {
         suggestionsRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, 100);
   };
+  
+  const handleViewSavedChannelPlan = (niche: Niche) => {
+      if (niche.channel_plan_content) {
+          setChannelPlanContent(niche.channel_plan_content);
+          setActiveNicheForChannelPlan(niche);
+          setIsChannelPlanModalOpen(true);
+          setIsLibraryModalOpen(false); // Close library modal for a better UX
+      }
+  };
 
   const handleSendTrainingMessage = async (message: string, files: File[]) => {
     const isGemini = selectedModel.startsWith('gemini');
@@ -1016,6 +1031,23 @@ const handleGenerateChannelPlan = async (niche: Niche) => {
 
         setChannelPlanContent(result);
         setChannelPlanCache(prev => ({ ...prev, [nicheName]: result }));
+        
+        // Also update savedNiches if the niche is already saved
+        setSavedNiches(prevSaved => {
+            const isSaved = prevSaved.some(saved => saved.niche_name.original === nicheName);
+            if (isSaved) {
+                const newSaved = prevSaved.map(saved => {
+                    if (saved.niche_name.original === nicheName) {
+                        return { ...saved, channel_plan_content: result };
+                    }
+                    return saved;
+                });
+                localStorage.setItem('savedNiches', JSON.stringify(newSaved));
+                return newSaved;
+            }
+            return prevSaved;
+        });
+
         setActiveNicheForChannelPlan(niche);
         setIsChannelPlanModalOpen(true);
     } catch (err: any) {
@@ -1049,6 +1081,22 @@ const handleGenerateMoreDetailedChannelPlan = async () => {
         const result = await _generatePlanApiCall(niche, true);
         setChannelPlanContent(result);
         setChannelPlanCache(prev => ({ ...prev, [nicheName]: result }));
+
+         // Also update savedNiches if the niche is already saved
+        setSavedNiches(prevSaved => {
+            const isSaved = prevSaved.some(saved => saved.niche_name.original === nicheName);
+            if (isSaved) {
+                const newSaved = prevSaved.map(saved => {
+                    if (saved.niche_name.original === nicheName) {
+                        return { ...saved, channel_plan_content: result };
+                    }
+                    return saved;
+                });
+                localStorage.setItem('savedNiches', JSON.stringify(newSaved));
+                return newSaved;
+            }
+            return prevSaved;
+        });
     } catch (err: any) {
         console.error(err);
         setNotifications(prev => [...prev, {
@@ -1419,6 +1467,7 @@ const handleGenerateMoreDetailedChannelPlan = async () => {
         onExport={handleExportSaved}
         onImport={handleImportSaved}
         onUseNiche={handleUseSavedNiche}
+        onViewChannelPlan={handleViewSavedChannelPlan}
         theme={theme}
       />
       <ErrorModal

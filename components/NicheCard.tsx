@@ -10,6 +10,7 @@ import {
   LightBulbIcon,
   TargetIcon,
   ShieldCheckIcon,
+  DownloadIcon,
 } from './icons/Icons';
 
 interface NicheCardProps {
@@ -26,6 +27,7 @@ interface NicheCardProps {
   onGenerateVideoIdeas: (niche: Niche) => void;
   isGeneratingIdeas: boolean;
   onExportVideoIdeas: (niche: Niche) => void;
+  onExportNiche: (niche: Niche) => void;
   isDirectAnalysis: boolean;
   theme: string;
 }
@@ -72,7 +74,7 @@ const AnalysisMetric: React.FC<AnalysisMetricProps> = ({ icon, label, score, exp
 };
 
 
-const NicheCard: React.FC<NicheCardProps> = ({ niche, index, onDevelop, onToggleSave, isSaved, onUseNiche, onViewPlan, isGeneratingContent, hasContentPlan, onGenerateVideoIdeas, isGeneratingIdeas, onExportVideoIdeas, isDirectAnalysis, theme }) => {
+const NicheCard: React.FC<NicheCardProps> = ({ niche, index, onDevelop, onToggleSave, isSaved, onUseNiche, onViewPlan, isGeneratingContent, hasContentPlan, onGenerateVideoIdeas, isGeneratingIdeas, onExportVideoIdeas, onExportNiche, isDirectAnalysis, theme }) => {
     const hasVideoIdeas = niche.video_ideas && niche.video_ideas.length > 0;
     const currentTheme = themes[theme] || themes.teal;
 
@@ -163,15 +165,6 @@ const NicheCard: React.FC<NicheCardProps> = ({ niche, index, onDevelop, onToggle
                     )}
                 </button>
                 
-                {hasVideoIdeas && (
-                    <button
-                        onClick={() => onExportVideoIdeas(niche)}
-                        className="w-full sm:w-auto flex items-center justify-center px-4 py-2 bg-gray-600 text-gray-300 font-semibold rounded-lg hover:bg-gray-500 hover:text-white transition-all duration-300 transform hover:scale-105"
-                    >
-                        <span>Tải về ý tưởng</span>
-                    </button>
-                )}
-
                 <button
                     onClick={() => onToggleSave(niche)}
                     className={`w-full sm:w-auto flex items-center justify-center px-4 py-2 font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 ${
@@ -182,6 +175,25 @@ const NicheCard: React.FC<NicheCardProps> = ({ niche, index, onDevelop, onToggle
                 >
                     <span>{isSaved ? 'Đã lưu' : 'Lưu kết quả'}</span>
                 </button>
+
+                <button
+                    onClick={() => onExportNiche(niche)}
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-gray-600 text-gray-300 font-semibold rounded-lg hover:bg-gray-500 hover:text-white transition-all duration-300 transform hover:scale-105"
+                    title="Tải chi tiết ngách (không bao gồm ý tưởng video)"
+                >
+                    <DownloadIcon />
+                    <span>Tải Chi Tiết</span>
+                </button>
+
+                {hasVideoIdeas && (
+                    <button
+                        onClick={() => onExportVideoIdeas(niche)}
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-gray-600 text-gray-300 font-semibold rounded-lg hover:bg-gray-500 hover:text-white transition-all duration-300 transform hover:scale-105"
+                    >
+                        <DownloadIcon />
+                        <span>Tải Ý Tưởng Video</span>
+                    </button>
+                )}
                 
                 {!isDirectAnalysis && (
                     <button

@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import type { AnalysisResult, Niche, ContentPlanResult } from '../types';
 import NicheCard from './NicheCard';
@@ -20,11 +21,12 @@ interface ResultsDisplayProps {
   onGenerateVideoIdeas: (niche: Niche) => void;
   generatingVideoIdeas: Set<string>;
   onExportVideoIdeas: (niche: Niche) => void;
+  onExportNiche: (niche: Niche) => void;
   isDirectAnalysis: boolean;
   theme: string;
 }
 
-const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onDevelop, analysisDepth, onLoadMore, isLoadingMore, onToggleSave, savedNiches, onUseNiche, onViewPlan, generatingNiches, contentPlanCache, numResults, onGenerateVideoIdeas, generatingVideoIdeas, onExportVideoIdeas, isDirectAnalysis, theme }) => {
+const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onDevelop, analysisDepth, onLoadMore, isLoadingMore, onToggleSave, savedNiches, onUseNiche, onViewPlan, generatingNiches, contentPlanCache, numResults, onGenerateVideoIdeas, generatingVideoIdeas, onExportVideoIdeas, onExportNiche, isDirectAnalysis, theme }) => {
   
   const numToAdd = parseInt(numResults, 10);
 
@@ -51,6 +53,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onDevelop, anal
               onGenerateVideoIdeas={onGenerateVideoIdeas}
               isGeneratingIdeas={isGeneratingIdeas}
               onExportVideoIdeas={onExportVideoIdeas}
+              onExportNiche={onExportNiche}
               isDirectAnalysis={isDirectAnalysis}
               theme={theme}
             />

@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useRef } from 'react';
 // Fix: Import `getTrainingResponseWithOpenAI` to resolve reference error.
 import { analyzeNicheIdea, getTrainingResponse, generateContentPlan, validateApiKey, developVideoIdeas, generateVideoIdeasForNiche, validateOpenAiApiKey, analyzeNicheIdeaWithOpenAI, generateVideoIdeasForNicheWithOpenAI, developVideoIdeasWithOpenAI, generateContentPlanWithOpenAI, analyzeKeywordDirectly, analyzeKeywordDirectlyWithOpenAI, getTrainingResponseWithOpenAI } from './services/geminiService';
@@ -16,7 +17,7 @@ import ErrorModal from './components/ErrorModal';
 import NotificationCenter from './components/NotificationCenter';
 import LibraryModal from './components/LibraryModal';
 import { keyFindingTranscript, nicheKnowledgeBase, parseKnowledgeBaseForSuggestions } from './data/knowledgeBase';
-import { exportVideoIdeasToTxt } from './utils/export';
+import { exportVideoIdeasToTxt, exportNicheToTxt } from './utils/export';
 import { themes, Theme } from './theme';
 
 export type ApiKeyStatus = 'idle' | 'checking' | 'valid' | 'invalid';
@@ -473,7 +474,7 @@ const App: React.FC = () => {
         if (isGemini) {
             ({ result, successfulKeyIndex } = await analyzeNicheIdea(idea, marketToAnalyze, apiKeys, trainingChatHistory, options, onKeyFailure));
         } else {
-            ({ result, successfulKeyIndex } = await analyzeNicheIdeaWithOpenAI(idea, marketToAnalyze, openAiApiKeys, selectedModel, trainingChatHistory, options, onKeyFailure));
+            ({ result, successfulKeyIndex } = await analyzeNicheIdeaWithOpenAI(idea, marketToAnalyze, openAiApiKeys, selectedModel, trainingChatHistory, options, onOpenAIKeyFailure));
         }
       }
 
@@ -853,6 +854,15 @@ const App: React.FC = () => {
     exportVideoIdeasToTxt(niche);
   };
   
+  const handleExportNiche = (niche: Niche) => {
+    exportNicheToTxt(niche);
+     setNotifications(prev => [...prev, {
+        id: Date.now(),
+        message: `Đã xuất chi tiết ngách "${niche.niche_name.translated}" thành công!`,
+        type: 'success'
+    }]);
+  };
+
   const handleClearSavedNiches = () => {
     if (window.confirm(`Bạn có chắc chắn muốn xóa tất cả ${savedNiches.length} ý tưởng đã lưu không? Hành động này không thể hoàn tác.`)) {
         setSavedNiches([]);
@@ -1225,6 +1235,7 @@ const App: React.FC = () => {
                   onGenerateVideoIdeas={handleGenerateVideoIdeas}
                   generatingVideoIdeas={generatingVideoIdeas}
                   onExportVideoIdeas={handleExportVideoIdeas}
+                  onExportNiche={handleExportNiche}
                   isDirectAnalysis={analysisType === 'direct'}
                   theme={theme}
                 />

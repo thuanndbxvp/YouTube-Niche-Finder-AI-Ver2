@@ -107,3 +107,55 @@ export function exportVideoIdeasToTxt(niche: Niche) {
         document.body.removeChild(link);
     }
 }
+
+export function exportNicheToTxt(niche: Niche) {
+    if (!niche) {
+        alert("Không có dữ liệu niche để xuất.");
+        return;
+    }
+
+    let content = `CHI TIẾT NGÁCH YOUTUBE\n`;
+    content += "========================================\n\n";
+
+    content += `NGÁCH: ${niche.niche_name.original}\n`;
+    content += `(Tiếng Việt): ${niche.niche_name.translated}\n\n`;
+
+    content += `MÔ TẢ:\n${niche.description}\n\n`;
+    content += `ĐỐI TƯỢNG MỤC TIÊU:\n${niche.audience_demographics}\n\n`;
+    content += `CHIẾN LƯỢC NỘI DUNG:\n${niche.content_strategy}\n\n`;
+
+    content += `PHÂN TÍCH CHI TIẾT:\n`;
+    content += `----------------------------------------\n`;
+    content += `   - Mức Độ Quan Tâm: ${niche.analysis.interest_level.score}/100\n`;
+    content += `     ${niche.analysis.interest_level.explanation}\n\n`;
+
+    content += `   - Tiềm Năng Kiếm Tiền: ${niche.analysis.monetization_potential.score}/100 (RPM: ${niche.analysis.monetization_potential.rpm_estimate})\n`;
+    content += `     ${niche.analysis.monetization_potential.explanation}\n\n`;
+
+    content += `   - Mức Độ Cạnh Tranh: ${niche.analysis.competition_level.score}/100\n`;
+    content += `     ${niche.analysis.competition_level.explanation}\n\n`;
+
+    content += `   - Tính Bền Vững: ${niche.analysis.sustainability.score}/100\n`;
+    content += `     ${niche.analysis.sustainability.explanation}\n\n`;
+
+    content += "========================================\n";
+
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8;' });
+    const deAccentedName = removeVietnameseTones(niche.niche_name.original);
+    const sanitizedFileName = deAccentedName
+        .toLowerCase()
+        .replace(/\s+/g, '_')
+        .replace(/[^a-z0-9_.-]/gi, '');
+    const filename = `niche_${sanitizedFileName}.txt`;
+
+    const link = document.createElement('a');
+    if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+}

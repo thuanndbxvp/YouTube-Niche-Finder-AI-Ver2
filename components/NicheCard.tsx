@@ -11,6 +11,7 @@ import {
   TargetIcon,
   ShieldCheckIcon,
   DownloadIcon,
+  ClipboardListIcon,
 } from './icons/Icons';
 
 interface NicheCardProps {
@@ -30,6 +31,8 @@ interface NicheCardProps {
   onExportNiche: (niche: Niche) => void;
   isDirectAnalysis: boolean;
   theme: string;
+  onGenerateChannelPlan: (niche: Niche) => void;
+  isGeneratingChannelPlan: boolean;
 }
 
 interface AnalysisMetricProps {
@@ -74,28 +77,48 @@ const AnalysisMetric: React.FC<AnalysisMetricProps> = ({ icon, label, score, exp
 };
 
 
-const NicheCard: React.FC<NicheCardProps> = ({ niche, index, onDevelop, onToggleSave, isSaved, onUseNiche, onViewPlan, isGeneratingContent, hasContentPlan, onGenerateVideoIdeas, isGeneratingIdeas, onExportVideoIdeas, onExportNiche, isDirectAnalysis, theme }) => {
+const NicheCard: React.FC<NicheCardProps> = ({ niche, index, onDevelop, onToggleSave, isSaved, onUseNiche, onViewPlan, isGeneratingContent, hasContentPlan, onGenerateVideoIdeas, isGeneratingIdeas, onExportVideoIdeas, onExportNiche, isDirectAnalysis, theme, onGenerateChannelPlan, isGeneratingChannelPlan }) => {
     const hasVideoIdeas = niche.video_ideas && niche.video_ideas.length > 0;
     const currentTheme = themes[theme] || themes.teal;
 
     return (
         <div className={`border border-gray-700 rounded-2xl shadow-lg p-6 w-full text-left transition-all duration-300 ${currentTheme.borderHover} hover:shadow-teal-500/10 flex flex-col ${index % 2 === 0 ? 'bg-gray-800/50' : 'bg-gray-800/80'}`}>
             <div className="flex-grow">
-                <div className="flex justify-between items-start">
+                <div className="flex justify-between items-start mb-4">
                     <div className="flex-grow">
                         <h2 className={`text-2xl font-bold bg-gradient-to-r ${currentTheme.gradient} text-transparent bg-clip-text`}>
                           {!isDirectAnalysis && <span className="text-gray-500">{index + 1}.</span>} {niche.niche_name.original}
                         </h2>
-                        <h3 className={`text-lg text-gray-400 -mt-1 mb-3 ${!isDirectAnalysis ? 'pl-8' : ''}`}>{niche.niche_name.translated}</h3>
+                        <h3 className={`text-lg text-gray-400 -mt-1 ${!isDirectAnalysis ? 'pl-8' : ''}`}>{niche.niche_name.translated}</h3>
                     </div>
-                    <button
-                        onClick={() => onExportNiche(niche)}
-                        className="flex-shrink-0 ml-4 flex items-center justify-center gap-2 px-4 py-2 bg-gray-600 text-gray-300 font-semibold rounded-lg hover:bg-gray-500 hover:text-white transition-all duration-300 text-sm"
-                        title="Tải chi tiết ngách (không bao gồm ý tưởng video)"
-                    >
-                        <DownloadIcon />
-                        <span>Tải Chi Tiết</span>
-                    </button>
+                    <div className="flex-shrink-0 ml-4 flex items-center gap-2">
+                         <button
+                            onClick={() => onGenerateChannelPlan(niche)}
+                            disabled={isGeneratingChannelPlan}
+                            className={`flex items-center justify-center gap-2 px-4 py-2 text-white font-semibold rounded-lg shadow-md transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed ${currentTheme.bg} ${currentTheme.bgHover} text-sm`}
+                            title="Tạo kế hoạch phát triển kênh chi tiết"
+                        >
+                            {isGeneratingChannelPlan ? (
+                                <>
+                                    <div className="w-4 h-4 border-2 border-t-white border-gray-800 rounded-full animate-spin"></div>
+                                    <span>Đang tạo...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <ClipboardListIcon />
+                                    <span>Kế hoạch xây kênh</span>
+                                </>
+                            )}
+                        </button>
+                        <button
+                            onClick={() => onExportNiche(niche)}
+                            className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-600 text-gray-300 font-semibold rounded-lg hover:bg-gray-500 hover:text-white transition-all duration-300 text-sm"
+                            title="Tải chi tiết ngách (không bao gồm ý tưởng video)"
+                        >
+                            <DownloadIcon />
+                            <span>Tải Chi Tiết</span>
+                        </button>
+                    </div>
                 </div>
                 <p className="text-gray-400 mb-6">{niche.description}</p>
                 

@@ -24,9 +24,11 @@ interface ResultsDisplayProps {
   onExportNiche: (niche: Niche) => void;
   isDirectAnalysis: boolean;
   theme: string;
+  onGenerateChannelPlan: (niche: Niche) => void;
+  generatingChannelPlan: Set<string>;
 }
 
-const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onDevelop, analysisDepth, onLoadMore, isLoadingMore, onToggleSave, savedNiches, onUseNiche, onViewPlan, generatingNiches, contentPlanCache, numResults, onGenerateVideoIdeas, generatingVideoIdeas, onExportVideoIdeas, onExportNiche, isDirectAnalysis, theme }) => {
+const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onDevelop, analysisDepth, onLoadMore, isLoadingMore, onToggleSave, savedNiches, onUseNiche, onViewPlan, generatingNiches, contentPlanCache, numResults, onGenerateVideoIdeas, generatingVideoIdeas, onExportVideoIdeas, onExportNiche, isDirectAnalysis, theme, onGenerateChannelPlan, generatingChannelPlan }) => {
   
   const numToAdd = parseInt(numResults, 10);
 
@@ -37,6 +39,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onDevelop, anal
         const hasContentPlan = !!contentPlanCache[niche.niche_name.original];
         const isGenerating = generatingNiches.has(niche.niche_name.original);
         const isGeneratingIdeas = generatingVideoIdeas.has(niche.niche_name.original);
+        const isGeneratingPlan = generatingChannelPlan.has(niche.niche_name.original);
         return (
             <NicheCard 
               key={`${niche.niche_name.original}-${index}`} 
@@ -56,6 +59,8 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onDevelop, anal
               onExportNiche={onExportNiche}
               isDirectAnalysis={isDirectAnalysis}
               theme={theme}
+              onGenerateChannelPlan={onGenerateChannelPlan}
+              isGeneratingChannelPlan={isGeneratingPlan}
             />
         );
       })}

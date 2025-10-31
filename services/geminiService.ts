@@ -1,4 +1,5 @@
 
+
 // Fix: Implement Gemini API service functions.
 import { GoogleGenAI, Type, Content } from "@google/genai";
 import type { AnalysisResult, ChatMessage, FilterLevel, Niche, ContentPlanResult, VideoIdea } from '../types';
@@ -605,6 +606,69 @@ export const analyzeKeywordDirectly = async (
     return await executeWithRetry(apiKeys, action, onKeyFailure);
 };
 
+// --- Channel Plan Generation ---
+
+const userChannelPlanInstruction = `Hãy đọc kỹ nội dung trong thẻ kết quả này (this niche card), bao gồm cả các ý tưởng video (nếu có), và tạo **kế hoạch phát triển kênh YouTube chi tiết**, bao gồm các phần sau:\n\n1. **Tóm tắt kênh** – Mô tả ngắn gọn chủ đề, mục tiêu, giá trị nổi bật của kênh.\n2. **Đối tượng mục tiêu** – Phân tích độ tuổi, giới tính, khu vực, sở thích và hành vi xem của khán giả lý tưởng.\n3. **Cấu trúc nội dung / series** – Gợi ý các nhóm chủ đề hoặc chuỗi nội dung chính (series), nêu ví dụ tiêu biểu.\n4. **Lịch đăng video** – Đề xuất kế hoạch đăng bài cho tuần đầu, 1 tháng, 3 tháng, 6 tháng, và ưu tiên thứ tự 5 video nên làm đầu tiên (top 5 video).\n5. **Chiến lược SEO và tăng trưởng** – Đề xuất bộ từ khóa, tiêu đề, cách tối ưu thumbnail, mô tả và tương tác để phát triển kênh.\n6. **Thương hiệu, giọng điệu, phong cách hình ảnh** – Mô tả phong cách kể chuyện, màu sắc thương hiệu, font chữ, không khí hình ảnh và phong cách dựng.\n7. **Kế hoạch kiếm tiền** – Đưa ra các hướng kiếm tiền khả thi (AdSense, tài trợ, affiliate, Patreon, sản phẩm số, v.v.).\n8. **Định hướng phát triển dài hạn** – Gợi ý hướng mở rộng thương hiệu kênh sau 1 năm (ví dụ: podcast, hợp tác, spin-off, nội dung chuyên sâu).\n9. **Gợi ý 5 bộ tên kênh** – Mỗi bộ gồm:\n   - Tên kênh\n   - Mô tả kênh\n   - Hashtag chủ đạo\n   - Prompt gợi ý tạo thumbnail\n   - Prompt gợi ý tạo logo\n   → Các phần này nên được viết bằng **ngôn ngữ mà tôi đã sử dụng khi tìm kiếm niche**, đồng thời có phần chú thích tiếng Việt bên dưới để tôi dễ hiểu.\n\nHãy trình bày kết quả bằng **tiếng Việt**, chia thành từng mục rõ ràng (## tiêu đề), trình bày dễ đọc, có thể hành động được.`;
+
+const channelPlanSystemInstruction = `You are a world-class YouTube channel development strategist. Your task is to generate a comprehensive, actionable channel growth plan based on the user's instructions and the provided niche data. The final output must be in VIETNAMESE and formatted clearly with markdown headers (## Title). You must follow all user instructions precisely.`;
+
+const formatNicheDataForPrompt = (niche: Niche): string => {
+    let nicheInfo = `
+--- DỮ LIỆU THẺ KẾT QUẢ NICHE (NICHE CARD DATA) ---
+
+**Tên ngách (Original):** ${niche.niche_name.original}
+**Tên ngách (Tiếng Việt):** ${niche.niche_name.translated}
+**Mô tả:** ${niche.description}
+**Đối tượng mục tiêu:** ${niche.audience_demographics}
+**Chiến lược nội dung đề xuất:** ${niche.content_strategy}
+
+**Phân tích chi tiết:**
+- Mức độ quan tâm: ${niche.analysis.interest_level.score}/100 (${niche.analysis.interest_level.explanation})
+- Tiềm năng kiếm tiền: ${niche.analysis.monetization_potential.score}/100 (RPM: ${niche.analysis.monetization_potential.rpm_estimate}) (${niche.analysis.monetization_potential.explanation})
+- Mức độ cạnh tranh: ${niche.analysis.competition_level.score}/100 (${niche.analysis.competition_level.explanation})
+- Tính bền vững: ${niche.analysis.sustainability.score}/100 (${niche.analysis.sustainability.explanation})
+`;
+    if (niche.video_ideas && niche.video_ideas.length > 0) {
+        nicheInfo += "\n**Các ý tưởng video ban đầu:**\n";
+        niche.video_ideas.forEach(idea => {
+            nicheInfo += `- ${idea.title.original} (${idea.title.translated}): ${idea.draft_content}\n`;
+        });
+    }
+
+    nicheInfo += `\n--- KẾT THÚC DỮ LIỆU THẺ ---`;
+    return nicheInfo;
+};
+
+export const generateChannelPlan = async (
+    niche: Niche,
+    apiKeys: string[],
+    trainingHistory: ChatMessage[],
+    onKeyFailure: (index: number) => void
+): Promise<{ result: string, successfulKeyIndex: number }> => {
+    const modelName = 'gemini-2.5-pro';
+    
+    const formattedNicheData = formatNicheDataForPrompt(niche);
+    const userPrompt = `${userChannelPlanInstruction}\n\n${formattedNicheData}`;
+
+    const contents: Content[] = [
+        ...trainingHistory.map(msg => ({ role: msg.role, parts: msg.parts })),
+        { role: 'user', parts: [{ text: userPrompt }] }
+    ];
+
+    const action = async (ai: GoogleGenAI) => {
+        const response = await ai.models.generateContent({
+            model: modelName,
+            contents: contents,
+            config: {
+                systemInstruction: channelPlanSystemInstruction
+            }
+        });
+        return response.text;
+    };
+    
+    return await executeWithRetry(apiKeys, action, onKeyFailure);
+};
+
 
 // --- OpenAI Service ---
 const executeOpenAIWithRetry = async <T>(
@@ -803,5 +867,21 @@ export const analyzeKeywordDirectlyWithOpenAI = async (
     const messages = convertToOpenAIMessages(trainingHistory, systemInstruction, userPrompt);
 
     const action = async (key: string) => JSON.parse(await callOpenAI(key, model, messages, responseSchema.properties));
+    return await executeOpenAIWithRetry(apiKeys, action, onKeyFailure);
+};
+
+export const generateChannelPlanWithOpenAI = async (
+    niche: Niche,
+    apiKeys: string[],
+    model: string,
+    trainingHistory: ChatMessage[],
+    onKeyFailure: (index: number) => void
+): Promise<{ result: string, successfulKeyIndex: number }> => {
+    const formattedNicheData = formatNicheDataForPrompt(niche);
+    const userPrompt = `${userChannelPlanInstruction}\n\n${formattedNicheData}`;
+    
+    const messages = convertToOpenAIMessages(trainingHistory, channelPlanSystemInstruction, userPrompt);
+    
+    const action = async (key: string) => await callOpenAI(key, model, messages);
     return await executeOpenAIWithRetry(apiKeys, action, onKeyFailure);
 };

@@ -159,3 +159,25 @@ export function exportNicheToTxt(niche: Niche) {
         document.body.removeChild(link);
     }
 }
+
+export function exportTextToTxt(content: string, baseFileName: string) {
+    if (!content) {
+        alert("Không có nội dung để xuất.");
+        return;
+    }
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8;' });
+    const deAccentedName = removeVietnameseTones(baseFileName);
+    const sanitizedFileName = deAccentedName
+        .toLowerCase()
+        .replace(/\s+/g, '_')
+        .replace(/[^a-z0-9_.-]/gi, '');
+    const filename = `${sanitizedFileName}.txt`;
+
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+}

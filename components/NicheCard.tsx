@@ -81,10 +81,22 @@ const NicheCard: React.FC<NicheCardProps> = ({ niche, index, onDevelop, onToggle
     return (
         <div className={`border border-gray-700 rounded-2xl shadow-lg p-6 w-full text-left transition-all duration-300 ${currentTheme.borderHover} hover:shadow-teal-500/10 flex flex-col ${index % 2 === 0 ? 'bg-gray-800/50' : 'bg-gray-800/80'}`}>
             <div className="flex-grow">
-                <h2 className={`text-2xl font-bold bg-gradient-to-r ${currentTheme.gradient} text-transparent bg-clip-text`}>
-                  {!isDirectAnalysis && <span className="text-gray-500">{index + 1}.</span>} {niche.niche_name.original}
-                </h2>
-                <h3 className={`text-lg text-gray-400 -mt-1 mb-3 ${!isDirectAnalysis ? 'pl-8' : ''}`}>{niche.niche_name.translated}</h3>
+                <div className="flex justify-between items-start">
+                    <div className="flex-grow">
+                        <h2 className={`text-2xl font-bold bg-gradient-to-r ${currentTheme.gradient} text-transparent bg-clip-text`}>
+                          {!isDirectAnalysis && <span className="text-gray-500">{index + 1}.</span>} {niche.niche_name.original}
+                        </h2>
+                        <h3 className={`text-lg text-gray-400 -mt-1 mb-3 ${!isDirectAnalysis ? 'pl-8' : ''}`}>{niche.niche_name.translated}</h3>
+                    </div>
+                    <button
+                        onClick={() => onExportNiche(niche)}
+                        className="flex-shrink-0 ml-4 flex items-center justify-center gap-2 px-4 py-2 bg-gray-600 text-gray-300 font-semibold rounded-lg hover:bg-gray-500 hover:text-white transition-all duration-300 text-sm"
+                        title="Tải chi tiết ngách (không bao gồm ý tưởng video)"
+                    >
+                        <DownloadIcon />
+                        <span>Tải Chi Tiết</span>
+                    </button>
+                </div>
                 <p className="text-gray-400 mb-6">{niche.description}</p>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -174,15 +186,6 @@ const NicheCard: React.FC<NicheCardProps> = ({ niche, index, onDevelop, onToggle
                     }`}
                 >
                     <span>{isSaved ? 'Đã lưu' : 'Lưu kết quả'}</span>
-                </button>
-
-                <button
-                    onClick={() => onExportNiche(niche)}
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-gray-600 text-gray-300 font-semibold rounded-lg hover:bg-gray-500 hover:text-white transition-all duration-300 transform hover:scale-105"
-                    title="Tải chi tiết ngách (không bao gồm ý tưởng video)"
-                >
-                    <DownloadIcon />
-                    <span>Tải Chi Tiết</span>
                 </button>
 
                 {hasVideoIdeas && (

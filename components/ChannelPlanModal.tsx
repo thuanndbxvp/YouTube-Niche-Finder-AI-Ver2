@@ -72,14 +72,16 @@ const ChannelPlanModal: React.FC<ChannelPlanModalProps> = ({ isOpen, onClose, pl
   
   const parseMarkdownToSections = (text: string): PlanSection[] => {
     const sections = text.split('## ').slice(1);
-    return sections.map(sectionText => {
-      const parts = sectionText.split('\n');
-      const title = parts[0].replace(/^[0-9]+\. /, '').trim();
-      const content = parts.slice(1).join('\n').trim();
-      const normalizedTitle = title.toLowerCase().replace(/^[0-9.]+\s*/, '');
-      const icon = sectionIconMap[normalizedTitle] || <DocumentTextIcon />;
-      return { icon, title, content };
-    });
+    return sections
+      .filter(sectionText => sectionText.trim() !== '')
+      .map(sectionText => {
+        const parts = sectionText.split('\n');
+        const title = parts[0].replace(/^[0-9]+\. /, '').trim();
+        const content = parts.slice(1).join('\n').trim();
+        const normalizedTitle = title.toLowerCase().replace(/^[0-9.]+\s*/, '');
+        const icon = sectionIconMap[normalizedTitle] || <DocumentTextIcon />;
+        return { icon, title, content };
+      });
   };
   
   const planSections = parseMarkdownToSections(planContent);

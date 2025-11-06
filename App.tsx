@@ -2,6 +2,8 @@
 
 
 
+
+
 import React, { useState, useEffect, useRef } from 'react';
 // Fix: Import `getTrainingResponseWithOpenAI` to resolve reference error.
 import { analyzeNicheIdea, getTrainingResponse, generateContentPlan, validateApiKey, developVideoIdeas, generateVideoIdeasForNiche, validateOpenAiApiKey, analyzeNicheIdeaWithOpenAI, generateVideoIdeasForNicheWithOpenAI, developVideoIdeasWithOpenAI, generateContentPlanWithOpenAI, analyzeKeywordDirectly, analyzeKeywordDirectlyWithOpenAI, getTrainingResponseWithOpenAI, generateChannelPlan, generateChannelPlanWithOpenAI } from './services/geminiService';
@@ -11,7 +13,7 @@ import ResultsDisplay from './components/ResultsDisplay';
 import Loader from './components/Loader';
 import ApiKeyModal from './components/ApiKeyModal';
 import TrainAiModal from './components/TrainAiModal';
-import { BookmarkIcon, PaintBrushIcon } from './components/icons/Icons';
+import { BookmarkIcon, PaintBrushIcon, SaveIcon } from './components/icons/Icons';
 import InitialSuggestions from './components/InitialSuggestions';
 import PasswordModal from './components/PasswordModal';
 import ContentPlanModal from './components/ContentPlanModal';
@@ -757,22 +759,49 @@ const App: React.FC = () => {
   };
 
 
-  const handleToggleSaveNiche = (niche: Niche) => {
-    setSavedNiches(prev => {
-        const isSaved = prev.some(saved => saved.niche_name.original === niche.niche_name.original);
-        let newSavedNiches;
-        if (isSaved) {
-            newSavedNiches = prev.filter(saved => saved.niche_name.original !== niche.niche_name.original);
-        } else {
-            const plan = channelPlanCache[niche.niche_name.original];
-            const nicheToSave = { ...niche };
-            if (plan) {
-                nicheToSave.channel_plan_content = plan;
-            }
-            newSavedNiches = [...prev, nicheToSave];
+  const handleSaveSession = () => {
+    if (!analysisResult || analysisResult.niches.length === 0) {
+      setNotifications(prev => [...prev, {
+          id: Date.now(),
+          message: 'Không có kết quả nào để lưu.',
+          type: 'error'
+      }]);
+      return;
+    }
+
+    const newNichesToSave = analysisResult.niches;
+    
+    setSavedNiches(prevSaved => {
+        const savedNicheNames = new Set(prevSaved.map(n => n.niche_name.original));
+        const uniqueNewNiches = newNichesToSave.filter(niche => !savedNicheNames.has(niche.niche_name.original));
+
+        if (uniqueNewNiches.length === 0) {
+            setNotifications(prev => [...prev, {
+                id: Date.now(),
+                message: 'Tất cả các kết quả hiện tại đã được lưu trước đó.',
+                type: 'error'
+            }]);
+            return prevSaved;
         }
-        localStorage.setItem('savedNiches', JSON.stringify(newSavedNiches));
-        return newSavedNiches;
+
+        const newNichesWithPlans = uniqueNewNiches.map(niche => {
+            const plan = channelPlanCache[niche.niche_name.original];
+            if (plan) {
+                return { ...niche, channel_plan_content: plan };
+            }
+            return niche;
+        });
+
+        const updatedSavedNiches = [...prevSaved, ...newNichesWithPlans];
+        localStorage.setItem('savedNiches', JSON.stringify(updatedSavedNiches));
+        
+        setNotifications(prev => [...prev, {
+            id: Date.now(),
+            message: `Đã lưu thành công ${uniqueNewNiches.length} ý tưởng mới vào thư viện.`,
+            type: 'success'
+        }]);
+
+        return updatedSavedNiches;
     });
   };
 
@@ -1202,6 +1231,15 @@ const handleGenerateMoreDetailedChannelPlan = async () => {
                 )}
             </div>
             <button
+                onClick={handleSaveSession}
+                disabled={!analysisResult || analysisResult.niches.length === 0}
+                className="relative flex items-center space-x-2 px-4 py-2 bg-gray-800/80 border border-gray-700 rounded-md text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="Lưu phiên"
+            >
+                <SaveIcon />
+                <span>Lưu phiên</span>
+            </button>
+            <button
                 onClick={() => setIsLibraryModalOpen(true)}
                 className="relative flex items-center space-x-2 px-4 py-2 bg-gray-800/80 border border-gray-700 rounded-md text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
                 aria-label="Thư viện"
@@ -1412,7 +1450,6 @@ const handleGenerateMoreDetailedChannelPlan = async () => {
                   analysisDepth={analysisDepth}
                   onLoadMore={handleLoadMore}
                   isLoadingMore={isLoadingMore}
-                  onToggleSave={handleToggleSaveNiche}
                   savedNiches={savedNiches}
                   onUseNiche={handleUseNiche}
                   onViewPlan={handleViewPlan}

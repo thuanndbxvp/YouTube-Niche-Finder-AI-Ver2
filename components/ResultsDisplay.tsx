@@ -1,6 +1,8 @@
 
 
 
+
+
 import React from 'react';
 import type { AnalysisResult, Niche, ContentPlanResult } from '../types';
 import NicheCard from './NicheCard';
@@ -12,7 +14,6 @@ interface ResultsDisplayProps {
   analysisDepth: number;
   onLoadMore: () => void;
   isLoadingMore: boolean;
-  onToggleSave: (niche: Niche) => void;
   savedNiches: Niche[];
   onUseNiche: (niche: Niche) => void;
   onViewPlan: (niche: Niche) => void;
@@ -30,7 +31,7 @@ interface ResultsDisplayProps {
   channelPlanCache: Record<string, string>;
 }
 
-const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onDevelop, analysisDepth, onLoadMore, isLoadingMore, onToggleSave, savedNiches, onUseNiche, onViewPlan, generatingNiches, contentPlanCache, numResults, onGenerateVideoIdeas, generatingVideoIdeas, onExportVideoIdeas, onExportNiche, isDirectAnalysis, theme, onGenerateChannelPlan, generatingChannelPlan, channelPlanCache }) => {
+const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onDevelop, analysisDepth, onLoadMore, isLoadingMore, savedNiches, onUseNiche, onViewPlan, generatingNiches, contentPlanCache, numResults, onGenerateVideoIdeas, generatingVideoIdeas, onExportVideoIdeas, onExportNiche, isDirectAnalysis, theme, onGenerateChannelPlan, generatingChannelPlan, channelPlanCache }) => {
   
   const numToAdd = parseInt(numResults, 10);
 
@@ -49,7 +50,6 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onDevelop, anal
               index={index}
               onDevelop={onDevelop}
               analysisDepth={analysisDepth}
-              onToggleSave={onToggleSave}
               isSaved={isSaved}
               onUseNiche={onUseNiche}
               onViewPlan={onViewPlan}

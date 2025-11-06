@@ -19,7 +19,6 @@ interface NicheCardProps {
   index: number;
   onDevelop: (nicheName: string) => void;
   analysisDepth: number;
-  onToggleSave: (niche: Niche) => void;
   isSaved: boolean;
   onUseNiche: (niche: Niche) => void;
   onViewPlan: (niche: Niche) => void;
@@ -78,7 +77,7 @@ const AnalysisMetric: React.FC<AnalysisMetricProps> = ({ icon, label, score, exp
 };
 
 
-const NicheCard: React.FC<NicheCardProps> = ({ niche, index, onDevelop, onToggleSave, isSaved, onUseNiche, onViewPlan, isGeneratingContent, hasContentPlan, onGenerateVideoIdeas, isGeneratingIdeas, onExportVideoIdeas, onExportNiche, isDirectAnalysis, theme, onGenerateChannelPlan, isGeneratingChannelPlan, channelPlanCache }) => {
+const NicheCard: React.FC<NicheCardProps> = ({ niche, index, onDevelop, isSaved, onUseNiche, onViewPlan, isGeneratingContent, hasContentPlan, onGenerateVideoIdeas, isGeneratingIdeas, onExportVideoIdeas, onExportNiche, isDirectAnalysis, theme, onGenerateChannelPlan, isGeneratingChannelPlan, channelPlanCache }) => {
     const hasVideoIdeas = niche.video_ideas && niche.video_ideas.length > 0;
     const currentTheme = themes[theme] || themes.teal;
     const hasChannelPlan = !!channelPlanCache[niche.niche_name.original];
@@ -88,9 +87,16 @@ const NicheCard: React.FC<NicheCardProps> = ({ niche, index, onDevelop, onToggle
             <div className="flex-grow">
                 <div className="flex justify-between items-start mb-4">
                     <div className="flex-grow">
-                        <h2 className={`text-2xl font-bold bg-gradient-to-r ${currentTheme.gradient} text-transparent bg-clip-text`}>
-                          {!isDirectAnalysis && <span className="text-gray-500">{index + 1}.</span>} {niche.niche_name.original}
-                        </h2>
+                        <div className="flex items-center gap-3">
+                            <h2 className={`text-2xl font-bold bg-gradient-to-r ${currentTheme.gradient} text-transparent bg-clip-text`}>
+                              {!isDirectAnalysis && <span className="text-gray-500">{index + 1}.</span>} {niche.niche_name.original}
+                            </h2>
+                            {isSaved && (
+                                <span className={`text-xs font-bold px-2 py-1 rounded-full text-white ${currentTheme.bg} self-center`}>
+                                    ĐÃ LƯU
+                                </span>
+                            )}
+                        </div>
                         <h3 className={`text-lg text-gray-400 -mt-1 ${!isDirectAnalysis ? 'pl-8' : ''}`}>{niche.niche_name.translated}</h3>
                     </div>
                     <div className="flex-shrink-0 ml-4 flex items-center gap-2">
@@ -206,17 +212,6 @@ const NicheCard: React.FC<NicheCardProps> = ({ niche, index, onDevelop, onToggle
                     )}
                 </button>
                 
-                <button
-                    onClick={() => onToggleSave(niche)}
-                    className={`w-full sm:w-auto flex items-center justify-center px-4 py-2 font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 ${
-                        isSaved 
-                            ? `${currentTheme.bg} text-white ${currentTheme.bgHover}` 
-                            : 'bg-gray-600 text-gray-300 hover:bg-gray-500 hover:text-white'
-                    }`}
-                >
-                    <span>{isSaved ? 'Đã lưu' : 'Lưu kết quả'}</span>
-                </button>
-
                 {hasVideoIdeas && (
                     <button
                         onClick={() => onExportVideoIdeas(niche)}

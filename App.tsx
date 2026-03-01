@@ -21,6 +21,8 @@ import ChannelPlanModal from './components/ChannelPlanModal';
 import ErrorModal from './components/ErrorModal';
 import NotificationCenter from './components/NotificationCenter';
 import LibraryModal from './components/LibraryModal';
+import PromotionModal from './components/PromotionModal';
+import PromotionNotification from './components/PromotionNotification';
 import { keyFindingTranscript, nicheKnowledgeBase, parseKnowledgeBaseForSuggestions } from './data/knowledgeBase';
 import { exportVideoIdeasToTxt, exportNicheToTxt } from './utils/export';
 import { themes, Theme } from './theme';
@@ -116,6 +118,7 @@ const App: React.FC = () => {
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState<boolean>(false);
   const [isTrainAiModalOpen, setIsTrainAiModalOpen] = useState<boolean>(false);
   const [isLibraryModalOpen, setIsLibraryModalOpen] = useState<boolean>(false);
+  const [isPromotionModalOpen, setIsPromotionModalOpen] = useState<boolean>(true);
 
   const [trainingChatHistory, setTrainingChatHistory] = useState<ChatMessage[]>([]);
   const [isTrainingLoading, setIsTrainingLoading] = useState<boolean>(false);
@@ -1549,6 +1552,12 @@ const handleGenerateMoreDetailedChannelPlan = async () => {
       >
         {error?.body}
       </ErrorModal>
+      
+      <PromotionModal 
+        isOpen={isPromotionModalOpen} 
+        onClose={() => setIsPromotionModalOpen(false)} 
+      />
+      <PromotionNotification />
     </div>
   );
 };
